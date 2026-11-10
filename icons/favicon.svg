@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#F6F1E7"/>
+<circle cx="256" cy="256" r="180" fill="#3E7F73"/>
+<text x="256" y="342" text-anchor="middle" font-family="Songti SC,SimSun,STSong,serif" font-size="240" font-weight="700" fill="#FFFDF8">珠</text>
+<circle cx="378" cy="150" r="26" fill="#D8B98D"/>
+</svg>
