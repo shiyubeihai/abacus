@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6F1E7">
+<title>算盘 · Abacus</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="算盘">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="珠算练习与小工具 · Abacus practice and tools">
+<style>
+  :root{
+    --bg:#F6F1E7;
+    --card:#FFFDF8;
+    --ink:#2C2A26;
+    --soft:#8C8577;
+    --line:#E3DACA;
+    --accent:#3E7F73;
+    --accent-soft:#E9F3F0;
+    --wood:#D8B98D;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ min-height:100%; }
+  body{
+    background:radial-gradient(900px 520px at 50% -14%, #FFFDF7 0%, var(--bg) 62%);
+    color:var(--ink);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    display:flex; justify-content:center;
+    padding:max(20px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+  }
+  .wrap{ width:100%; max-width:460px; }
+
+  .top{ display:flex; justify-content:flex-end; margin-bottom:6px; }
+  .lang{ display:flex; gap:4px; }
+  .lang button{
+    border:1px solid var(--line); background:var(--card); color:var(--soft);
+    border-radius:8px; min-width:34px; height:26px; padding:0 8px;
+    font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer;
+    transition:background .12s, color .12s, border-color .12s;
+  }
+  .lang button:hover{ background:var(--accent-soft); }
+  .lang button.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  header h1{
+    font-family:"Songti SC","SimSun","STSong",serif;
+    font-size:38px; font-weight:700; letter-spacing:.16em;
+    display:flex; align-items:baseline; gap:12px;
+  }
+  header h1 span{
+    font-family:"SF Mono",Menlo,Consolas,monospace;
+    font-size:12px; font-weight:600; letter-spacing:.22em; color:#B08A56;
+  }
+  .sub{ font-size:13px; color:var(--soft); letter-spacing:.14em; margin-top:10px; }
+  .rule{ height:1px; background:var(--line); margin:22px 0 20px; }
+
+  main{ display:flex; flex-direction:column; gap:13px; }
+
+  .card{
+    position:relative; display:flex; align-items:flex-start; gap:13px;
+    background:var(--card); border:1.5px solid var(--line); border-radius:18px;
+    padding:17px 17px 15px; text-decoration:none; color:inherit;
+    box-shadow:0 2px 8px rgba(120,108,92,.06);
+    transition:transform .12s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .card:hover{ border-color:#CFBFA2; box-shadow:0 6px 18px rgba(120,108,92,.11); }
+  .card:active{ transform:scale(.985); }
+  .card .ico{
+    flex:none; width:46px; height:46px; border-radius:12px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(120,100,60,.16);
+  }
+  .card .ico img{ width:100%; height:100%; display:block; }
+  .card .body{ min-width:0; flex:1; }
+  .card .title{ font-size:18px; font-weight:700; letter-spacing:.05em; }
+  .card .desc{ font-size:12.5px; line-height:1.72; color:var(--soft); margin-top:6px; }
+  .card .tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+  .card .tags span{
+    font-size:10.5px; letter-spacing:.05em; color:#9A8F7E;
+    background:#F6F2EA; border-radius:6px; padding:2.5px 8px;
+  }
+  .card .go{
+    flex:none; font-size:12px; color:var(--accent); letter-spacing:.08em;
+    align-self:center; padding-left:2px;
+  }
+
+  .empty{
+    border:1.5px dashed var(--line); border-radius:18px;
+    padding:22px 18px; text-align:center;
+    font-size:12.5px; color:#C0B7A9; letter-spacing:.05em;
+  }
+
+  footer{ margin-top:30px; font-size:11.5px; line-height:1.9; color:#BDB4A7; letter-spacing:.03em; }
+  footer .dim{ color:#CBC3B6; margin-top:4px; }
+
+  @media (max-width:380px){
+    header h1{ font-size:32px; }
+    header h1 span{ font-size:11px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="lang" id="lang">
+      <button type="button" data-lang="zh" class="on">中</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>算盘<span>ABACUS</span></h1>
+    <p class="sub" data-i18n="sub">珠算练习与小工具</p>
+  </header>
+  <div class="rule"></div>
+
+  <main>
+    <a class="card" href="./zhuxinsuan/">
+      <div class="ico"><img src="./icons/favicon.svg" alt=""></div>
+      <div class="body">
+        <div class="title" data-i18n="t1">珠心算 · 听算</div>
+        <div class="desc" data-i18n="d1">听数字，在算盘上累加。可选 4–8 列、3–15 个加数，支持遮盘盲算、自己拨珠作答，还有「打百子」演示和练习日历。</div>
+        <div class="tags">
+          <span data-i18n="g1">4–8 列</span>
+          <span data-i18n="g2">3–15 个数</span>
+          <span data-i18n="g3">打百子演示</span>
+        </div>
+      </div>
+      <div class="go">→</div>
+    </a>
+
+    <div class="empty" data-i18n="empty">还有位置，继续加</div>
+  </main>
+
+  <footer>
+    <p data-i18n="f1">纯前端，无需安装。练习记录与计时存在本机。</p>
+    <p class="dim" data-i18n="f2">手机上用浏览器打开，选「添加到主屏幕」即可当 App 使用。</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var KEY = 'abacus.lang';
+  var TEXT = {
+    en: {
+      sub: 'Abacus practice & tools',
+      t1: 'Mental Abacus · Listening',
+      d1: 'Hear numbers, add them on the abacus. Choose 4–8 columns and 3–15 addends; practise blind, enter beads yourself, or watch the 1-to-100 demo. Includes a practice calendar.',
+      g1: '4–8 columns',
+      g2: '3–15 addends',
+      g3: '1–100 demo',
+      empty: 'More tools on the way',
+      f1: 'Pure front end, nothing to install. Practice records and timer stay on this device.',
+      f2: 'Open in a phone browser and choose “Add to Home Screen” to use it as an app.'
+    }
+  };
+
+  var nodes = document.querySelectorAll('[data-i18n]');
+  var zh = {};
+  for (var i = 0; i < nodes.length; i++) zh[nodes[i].getAttribute('data-i18n')] = nodes[i].textContent;
+
+  function apply(lang){
+    for (var i = 0; i < nodes.length; i++){
+      var k = nodes[i].getAttribute('data-i18n');
+      nodes[i].textContent = lang === 'en' ? TEXT.en[k] : zh[k];
+    }
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+    var btns = document.querySelectorAll('#lang button');
+    for (var j = 0; j < btns.length; j++){
+      btns[j].classList.toggle('on', btns[j].getAttribute('data-lang') === lang);
+    }
+    try{ localStorage.setItem(KEY, lang); }catch(e){}
+  }
+
+  var saved = 'zh';
+  try{ saved = localStorage.getItem(KEY) === 'en' ? 'en' : 'zh'; }catch(e){}
+
+  document.getElementById('lang').addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('button[data-lang]') : null;
+    if (b) apply(b.getAttribute('data-lang'));
+  });
+
+  if (saved === 'en') apply('en');
+
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>

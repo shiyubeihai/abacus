@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6F1E7">
+<title>珠心算 · 听算</title>
+<style>
+  :root{
+    --paper:#F6F1E7;
+    --panel:#FFFDF8;
+    --line:#E3DACA;
+    --ink:#2C2A26;
+    --muted:#8C8577;
+    --accent:#3E7F73;         /* 青瓷 */
+    --accent-soft:#E9F3F0;
+    --wood:#D8B98D;           /* 原木框 */
+    --wood-dark:#C09A6B;
+    --wood-line:#B08655;
+    --rod:#7A5C38;            /* 杆：深一档的本色木 */
+    --bead:#262628;           /* 珠：哑光黑 */
+    --bead-hi:#4A4A4E;
+    --bead-lo:#101012;
+    --cloth:#C6B49A;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:radial-gradient(900px 500px at 50% -12%, #FFFDF7 0%, var(--paper) 62%);
+    color:var(--ink);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh;
+    padding:max(14px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap{ max-width:520px; margin:0 auto; }
+
+  header{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  h1{
+    font-family:"Songti SC","SimSun","STSong",serif;
+    font-size:24px; margin:0; letter-spacing:.1em; color:var(--accent); flex:1;
+    line-height:1.2;
+  }
+  h1 span{ font-size:12.5px; color:var(--muted); letter-spacing:.06em; margin-left:7px; }
+  .top-btn{
+    border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:9px; padding:6px 11px; font-size:12.5px; font-family:inherit;
+    cursor:pointer; font-weight:600;
+  }
+  .top-btn:hover{ background:#F2EBDD; }
+
+  /* ---------- 头部方按钮 ---------- */
+  .tools{ display:flex; align-items:center; gap:6px; flex:none; }
+  .top-btn{ height:32px; }
+  .sq{
+    width:32px; height:32px; flex:none; position:relative;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); background:var(--panel); color:var(--accent);
+    border-radius:9px; padding:0; cursor:pointer;
+    transition:background .12s, border-color .12s, transform .12s;
+  }
+  .sq:hover{ background:var(--accent-soft); border-color:#BFD8D2; }
+  .sq:active{ transform:scale(.96); }
+  .sq svg{
+    width:18px; height:18px; display:block; fill:none; stroke:currentColor;
+    stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round;
+  }
+  .sq.paused{ color:var(--muted); }
+  .sq .dot{
+    position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 0 2px var(--panel);
+  }
+  .sq.paused .dot{ display:none; }
+
+  .status{ font-size:12px; color:var(--muted); min-height:18px; margin-bottom:8px; letter-spacing:.02em; }
+
+  /* 式子 */
+  .expr{
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+    gap:4px 5px; min-height:30px; margin:0 0 10px;
+    font-size:16px; color:var(--ink); letter-spacing:.02em; font-variant-numeric:tabular-nums;
+  }
+  .expr .n{
+    padding:2px 7px; border-radius:7px; background:var(--panel); border:1px solid var(--line);
+    animation:popIn .16s ease;
+  }
+  .expr .op{ color:var(--muted); font-size:14px; }
+  .expr .eq{ color:var(--accent); font-weight:700; }
+  .expr .q{ color:var(--accent); border-color:#BFD8D2; background:var(--accent-soft); }
+  .expr.empty{ color:#BFB6A6; font-size:12.5px; letter-spacing:.12em; }
+  @keyframes popIn{ from{ transform:scale(.86); opacity:.4; } to{ transform:scale(1); opacity:1; } }
+  .status b{ color:var(--accent); }
+
+  /* ---------- 算盘 ---------- */
+  .stage{
+    position:relative; display:flex; justify-content:center; margin-bottom:12px;
+    width:100%;
+  }
+  .abacus{
+    position:relative; padding:14px 16px;
+    background:linear-gradient(180deg,#E6CCA3 0%, #D9BA8E 42%, #C9A87A 100%);
+    border-radius:12px;
+    box-shadow:0 6px 16px rgba(90,60,25,.16), inset 0 1px 0 rgba(255,255,255,.55);
+  }
+  .abacus::after{
+    content:""; position:absolute; inset:6px; border-radius:8px;
+    border:1px solid rgba(150,110,60,.22); pointer-events:none;
+  }
+  .cols{ position:relative; display:flex; padding:0 5px; }
+
+  .clear-btn{
+    position:absolute; top:5px; right:10px; z-index:6;
+    height:23px; padding:0 9px;
+    display:inline-flex; align-items:center;
+    border:1px solid rgba(122,92,56,.42);
+    background:rgba(255,252,244,.93);
+    color:#6B4F2E; border-radius:7px;
+    font-size:11px; font-weight:700; font-family:inherit; letter-spacing:.05em;
+    cursor:pointer; box-shadow:0 1px 3px rgba(80,55,25,.26);
+    transition:background .12s, transform .12s;
+  }
+  .clear-btn:hover{ background:#fff; }
+  .clear-btn:active{ transform:scale(.94); }
+  .stage.veiled .clear-btn{ opacity:0; pointer-events:none; }
+  @media (max-width:420px){
+    .clear-btn{ height:20px; padding:0 7px; font-size:10px; top:4px; right:7px; }
+  }
+  .col{ position:relative; }
+  .rod{
+    position:absolute; left:50%; top:0; bottom:0; width:4px; margin-left:-2px;
+    background:linear-gradient(90deg, #5E4528, var(--rod) 45%, #9C7B4E);
+    border-radius:2px;
+  }
+  .beam{
+    position:absolute; left:0; right:0;
+    background:linear-gradient(180deg,#A87D4C,#8B6639);
+    box-shadow:0 2px 4px rgba(90,60,25,.30);
+    z-index:2;
+  }
+  .bead{
+    position:absolute; left:50%;
+    background:radial-gradient(circle at 34% 30%, var(--bead-hi) 0%, var(--bead) 52%, var(--bead-lo) 100%);
+    border-radius:46% / 26%;
+    box-shadow:0 1px 2px rgba(40,25,10,.30), inset 0 1px 1px rgba(255,255,255,.10);
+    transition:top .16s cubic-bezier(.3,.9,.4,1);
+  }
+  .col.idle .bead{
+    filter:none;
+    opacity:.26;
+  }
+  .col.idle .rod{ opacity:.30; }
+  .abacus.dial .col:not(.idle) .bead{ cursor:pointer; }
+  .abacus.dial .col:not(.idle) .bead:hover{ filter:brightness(2.1); }
+  .abacus.dial .col:not(.idle) .bead:active{ transform:scale(.94); }
+  .bead::after{
+    content:""; position:absolute; left:24%; top:14%; width:26%; height:20%;
+    border-radius:50%; background:rgba(255,255,255,.10); filter:blur(2px);
+  }
+
+  /* 遮布 */
+  .veil{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    border-radius:12px; z-index:5;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 5px, rgba(0,0,0,.035) 5px 10px),
+      linear-gradient(180deg,#C4AE92 0%, #B39D80 55%, #A98F72 100%);
+    color:#F4EADC; font-size:13px; letter-spacing:.3em; text-shadow:0 1px 2px rgba(70,50,30,.55);
+    box-shadow:inset 0 0 40px rgba(70,50,30,.28);
+  }
+  .veil.on{ display:flex; }
+
+  /* ---------- 控制 ---------- */
+  .row{ display:flex; align-items:center; gap:10px; margin:9px 0; }
+  .k{ width:34px; font-size:12.5px; color:var(--muted); flex:none; }
+  .seg{ display:flex; gap:6px; flex-wrap:wrap; }
+  .seg button{
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    border-radius:999px; padding:5px 13px; font-size:12.5px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:background .15s,color .15s,border-color .15s;
+  }
+  .seg button.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .seg button.demoing{ background:#C0392B; border-color:#C0392B; color:#fff; }
+
+  .actions{ display:flex; gap:8px; margin-top:14px; }
+  .primary{
+    flex:1; border:1px solid var(--accent); background:var(--accent); color:#fff;
+    border-radius:11px; padding:12px; font-size:15px; font-weight:700;
+    font-family:inherit; cursor:pointer; letter-spacing:.1em;
+  }
+  .primary:hover{ filter:brightness(1.06); }
+  .primary:disabled{ opacity:.45; cursor:not-allowed; filter:none; }
+  .ghost{
+    flex:none; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:11px; padding:12px 16px; font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer;
+  }
+  .ghost:hover{ background:#F2EBDD; }
+  .ghost.on{ background:var(--accent-soft); border-color:#BFD8D2; color:var(--accent); }
+
+  /* ---------- 作答 ---------- */
+  .answer{ display:none; gap:8px; margin-top:14px; }
+  .answer.on{ display:flex; }
+  .answer input{
+    flex:1; min-width:0; border:1px solid var(--line); background:var(--panel);
+    border-radius:11px; padding:12px 14px; font-size:20px; font-family:inherit;
+    color:var(--ink); letter-spacing:.08em; text-align:center; outline:none;
+  }
+  .answer input:focus{ border-color:var(--accent); }
+  .answer button{ flex:none; }
+
+  .result{ display:none; margin-top:14px; padding:14px; border-radius:12px; text-align:center; }
+  .result.on{ display:block; }
+  .result.ok{ background:#F1F8F3; border:1px solid #B7D8C2; }
+  .result.no{ background:#FDF1EF; border:1px solid #EBC4C0; }
+  .result .big{ font-size:22px; font-weight:700; letter-spacing:.04em; }
+  .result.ok .big{ color:#2E8B57; }
+  .result.no .big{ color:#C0392B; }
+  .result .sub{ font-size:12.5px; color:var(--muted); margin-top:6px; }
+  .result .sub b{ color:var(--ink); font-size:14px; }
+
+  /* ---------- 口诀弹层 ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
+    padding:16px; background:rgba(43,37,25,.44);
+  }
+  .overlay.on{ display:flex; }
+  .modal{
+    width:min(100%,440px); max-height:88vh; overflow:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:16px; box-shadow:0 20px 60px rgba(40,30,10,.28);
+  }
+  .modal h2{ margin:0; font-size:17px; color:var(--accent); letter-spacing:.08em; }
+  .modal .x{
+    border:none; background:transparent; color:var(--muted); font-size:22px;
+    line-height:1; cursor:pointer; padding:2px 6px;
+  }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; }
+  .tabs{ display:flex; gap:6px; margin:12px 0 10px; }
+  .tabs button{
+    flex:1; border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    border-radius:9px; padding:8px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+  }
+  .tabs button.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .f-group{ margin-bottom:12px; }
+  .f-group h3{
+    margin:0 0 6px; font-size:12.5px; color:var(--muted); font-weight:600; letter-spacing:.06em;
+  }
+  .f-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .f-cell{
+    background:#FBF7EE; border:1px solid var(--line); border-radius:8px;
+    padding:7px 4px; text-align:center; font-size:13px; letter-spacing:.02em;
+  }
+  .f-cell.mul{ font-size:12.5px; }
+  .f-cell em{ font-style:normal; color:var(--accent); font-weight:700; }
+
+  .foot-note{ font-size:11px; color:var(--muted); line-height:1.7; margin-top:16px; }
+
+  /* ---------- 练习日历 ---------- */
+  .cal-stats{ display:flex; gap:6px; margin-top:12px; }
+  .cal-stats div{
+    flex:1; display:flex; align-items:baseline; gap:3px;
+    background:#FBF7EE; border:1px solid var(--line); border-radius:10px; padding:7px 9px;
+  }
+  .cal-stats span{ font-size:10.5px; color:var(--muted); }
+  .cal-stats b{ margin-left:auto; font-size:16px; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .cal-stats i{ font-style:normal; font-size:10px; color:var(--muted); }
+
+  .cal-nav{ display:flex; align-items:center; gap:6px; margin:12px 0 8px; }
+  .cal-arrow{
+    width:30px; height:30px; padding:0; border:1px solid var(--line); background:var(--panel);
+    color:var(--muted); border-radius:8px; font-size:17px; line-height:1; cursor:pointer; font-family:inherit;
+  }
+  .cal-arrow:hover{ background:var(--accent-soft); color:var(--accent); }
+  .cal-month{ flex:1; text-align:center; font-size:14.5px; font-weight:700; color:var(--accent); }
+  .cal-today{
+    height:30px; padding:0 10px; border:1px solid #BFD8D2; background:var(--accent-soft);
+    color:var(--accent); border-radius:8px; font-size:11.5px; font-weight:700;
+    font-family:inherit; cursor:pointer;
+  }
+  .cal-week,.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .cal-week span{ text-align:center; font-size:10px; color:var(--muted); padding-bottom:2px; }
+  .cal-day{
+    position:relative; min-width:0; min-height:46px; padding:3px 2px 2px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); border-radius:9px; font-family:inherit;
+    cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:background .12s, border-color .12s;
+  }
+  .cal-day.blank{ background:transparent; border-color:transparent; pointer-events:none; }
+  .cal-day:hover{ background:var(--accent-soft); }
+  .cal-day .num{ font-size:12.5px; font-weight:600; line-height:1.25; font-variant-numeric:tabular-nums; z-index:1; }
+  .cal-day .lbl{
+    width:100%; margin-top:1px; text-align:center; font-size:8.5px; line-height:1.25;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:1;
+  }
+  .cal-day .lbl.lunar{ color:#A39A8A; }
+  .cal-day .lbl.ev-fest{ color:#D64541; font-weight:700; }
+  .cal-day .lbl.ev-term{ color:#2F6B4F; font-weight:700; }
+  .cal-day .lbl.ev-birth{ color:#A4402F; font-weight:700; }
+  .cal-day .lbl.ev-mem{ color:#8A7355; font-weight:600; }
+  .cal-day .lbl.ev-warn{ color:#A8762A; font-weight:700; }
+  .cal-pdot{
+    position:absolute; top:3px; right:3px; width:5px; height:5px;
+    border-radius:50%; background:var(--accent); z-index:2;
+  }
+  .cal-day.today{ border-color:var(--accent); border-width:1.5px; }
+  .cal-day.sel{ background:var(--accent-soft); border-color:var(--accent); }
+
+  .cal-detail{
+    margin-top:10px; padding-top:10px; border-top:1px solid var(--line);
+    font-size:12px; color:var(--muted); min-height:20px; line-height:1.6;
+  }
+  .cal-dhead{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .cal-dhead b{ font-size:13.5px; color:var(--ink); }
+  .cal-dhead span{ font-size:10.5px; color:var(--muted); }
+  .cal-evs{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .cal-ev{
+    display:flex; align-items:flex-start; gap:8px;
+    padding:7px 8px; border-radius:10px; background:#FBF7EE; border:1px solid var(--line);
+  }
+  .cal-tag{
+    flex:none; font-size:9.5px; font-weight:700; line-height:1.5;
+    padding:2px 6px; border-radius:999px; white-space:nowrap;
+  }
+  .cal-ev-main{ min-width:0; font-size:11.5px; line-height:1.5; color:#4A4438; }
+  .cal-ev-main b{ display:block; font-size:11.5px; color:#272436; font-weight:700; }
+  .cal-ev-main small{ display:block; margin-top:2px; font-size:10.5px; color:#8C8577; line-height:1.45; }
+  .cal-empty{
+    margin-top:8px; padding:10px 8px; text-align:center;
+    font-size:11.5px; color:var(--muted);
+    background:#FBF7EE; border:1px dashed var(--line); border-radius:10px;
+  }
+  .cal-practice{ margin-top:8px; font-size:11.5px; color:var(--muted); }
+  .cal-practice b{ color:var(--accent); font-size:13px; }
+  .cal-sub{ font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* ---------- 练习计时 ---------- */
+  .timer-main{
+    margin-top:12px; padding:14px 12px 12px; text-align:center;
+    background:var(--accent-soft); border:1px solid #CFE3DD; border-radius:14px;
+  }
+  .timer-label{ font-size:11px; color:var(--muted); letter-spacing:.1em; }
+  .timer-big{
+    margin:3px 0 4px; font-size:34px; line-height:1.15; font-weight:800;
+    color:var(--accent); letter-spacing:.04em; font-variant-numeric:tabular-nums;
+  }
+  .timer-status{ font-size:11px; color:var(--muted); }
+  .timer-status.paused{ color:#C0392B; }
+  .timer-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .timer-grid div{
+    padding:8px 10px; border-radius:10px; background:#FBF7EE; border:1px solid var(--line);
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .timer-grid span{ font-size:10px; color:var(--muted); }
+  .timer-grid b{ font-size:13px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .timer-actions{ display:flex; gap:8px; margin-top:12px; }
+  .timer-actions button{
+    flex:1; border-radius:10px; padding:10px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .timer-actions .main{ border:1px solid var(--accent); background:var(--accent); color:#fff; }
+  .timer-actions .main:hover{ filter:brightness(1.06); }
+  .timer-actions .sub{ border:1px solid var(--line); background:var(--panel); color:var(--ink); }
+  .timer-actions .sub:hover{ background:#F2EBDD; }
+  .timer-note{ margin-top:10px; text-align:center; font-size:10.5px; color:var(--muted); }
+</style>
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="算盘">
+<meta name="description" content="珠心算听算练习 · Mental abacus listening practice">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>珠心算<span>听算练习</span></h1>
+    <div class="tools">
+      <button class="top-btn" id="btnFormula" type="button">口诀</button>
+      <button class="sq" id="btnCal" type="button" aria-label="练习日历" title="练习日历">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+          <path d="M7 3v4M17 3v4M3 10h18"></path>
+          <path d="M8 14h2M14 14h2M8 18h2M14 18h2"></path>
+        </svg>
+      </button>
+      <button class="sq" id="btnTimer" type="button" aria-label="练习计时" title="练习计时">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="13" r="8"></circle>
+          <path d="M12 9v4l2.5 1.5"></path>
+          <path d="M9 3h6"></path>
+        </svg>
+        <i class="dot"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="status" id="status">选好位数和个数，按开始</div>
+  <div class="expr empty" id="expr">式子在这里</div>
+
+  <div class="stage">
+    <div class="abacus" id="abacus">
+      <div class="veil" id="veil">遮住中</div>
+    </div>
+    <button class="clear-btn" id="btnClear" type="button" title="一键清盘">清盘</button>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="btnStart">开始</button>
+    <button class="ghost" id="btnVeil">遮住算盘</button>
+  </div>
+
+  <div id="settings">
+    <div class="row"><span class="k">列数</span>
+      <div class="seg" id="segCols"></div>
+    </div>
+    <div class="row"><span class="k">个数</span>
+      <div class="seg" id="segCount"></div>
+    </div>
+    <div class="row"><span class="k">速度</span>
+      <div class="seg" id="segSpeed"></div>
+    </div>
+    <div class="row"><span class="k">作答</span>
+      <div class="seg" id="segAnswer"></div>
+    </div>
+    <div class="row"><span class="k">式子</span>
+      <div class="seg" id="segExpr"></div>
+    </div>
+  </div>
+
+  <div class="answer" id="answerBox">
+    <input id="answerInput" type="text" inputmode="numeric" autocomplete="off" placeholder="输入得数">
+    <button class="primary" id="btnSubmit" style="flex:none;padding:12px 20px">提交</button>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="foot-note">
+    算盘是上一下四的架式。点「遮住算盘」，珠子看不见、拨珠声还在，就是盲算。<br>
+    开头几位数听完再想，不要回头看。
+  </div>
+</div>
+
+<!-- 口诀 -->
+<div class="overlay" id="formulaOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>口诀</h2>
+      <button class="x" id="btnCloseFormula">×</button>
+    </div>
+    <div class="tabs">
+      <button class="on" data-tab="add" id="tabAdd">加法口诀</button>
+      <button data-tab="mul" id="tabMul">乘法口诀</button>
+    </div>
+    <div id="formulaBody"></div>
+  </div>
+</div>
+
+<!-- 练习日历 -->
+<div class="overlay" id="calOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2>日历</h2>
+        <div class="cal-sub">节日 · 节气 · 纪念日 · 练习记录</div>
+      </div>
+      <button class="x" id="btnCloseCal" type="button">×</button>
+    </div>
+    <div class="cal-stats">
+      <div><span>今日</span><b id="calTodayN">0</b><i>组</i></div>
+      <div><span>本月</span><b id="calMonthN">0</b><i>组</i></div>
+      <div><span>连续</span><b id="calStreak">0</b><i>天</i></div>
+    </div>
+    <div class="cal-nav">
+      <button class="cal-arrow" id="calPrev" type="button" aria-label="上个月">‹</button>
+      <div class="cal-month" id="calMonth"></div>
+      <button class="cal-arrow" id="calNext" type="button" aria-label="下个月">›</button>
+      <button class="cal-today" id="calToday" type="button">今天</button>
+    </div>
+    <div class="cal-week">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-detail" id="calDetail"></div>
+  </div>
+</div>
+
+<!-- 练习计时 -->
+<div class="overlay" id="timerOverlay">
+  <div class="modal" style="width:min(100%,340px)">
+    <div class="modal-head">
+      <h2>练习计时</h2>
+      <button class="x" id="btnCloseTimer" type="button">×</button>
+    </div>
+    <div class="timer-main">
+      <div class="timer-label">今天</div>
+      <div class="timer-big" id="timerToday">00:00:00</div>
+      <div class="timer-status" id="timerStatus">计时中</div>
+    </div>
+    <div class="timer-grid">
+      <div><span>本次</span><b id="timerSession">00:00:00</b></div>
+      <div><span>累计</span><b id="timerTotal">00:00:00</b></div>
+    </div>
+    <div class="timer-actions">
+      <button class="main" id="timerToggle" type="button">暂停</button>
+      <button class="sub" id="timerReset" type="button">清零今天</button>
+    </div>
+    <div class="timer-note">只统计页面打开且可见的时间</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ============ 参数 ============ */
+  var SPEED = { slow: 1500, mid: 1000, fast: 700 };
+  var SPEED_LABEL = { slow: '慢', mid: '中', fast: '快' };
+
+  var CFG = { cols: 4, count: 5, speed: 'mid', showExpr: true, answerMode: 'type' };
+  var G = { sum: 0, seq: [], playing: false, masked: false, answering: false, t0: 0 };
+
+  /* ============ 号码读法 ============ */
+  var CN = ['零','一','二','三','四','五','六','七','八','九'];
+  var UNIT = ['','十','百','千'];
+
+  function read4(n){
+    if (n === 0) return '零';
+    var d = [Math.floor(n/1000)%10, Math.floor(n/100)%10, Math.floor(n/10)%10, n%10];
+    var s = '', zero = false;
+    for (var i=0;i<4;i++){
+      var x = d[i];
+      if (x === 0){ if (s) zero = true; continue; }
+      if (zero){ s += '零'; zero = false; }
+      s += CN[x] + UNIT[3-i];
+    }
+    if (s.indexOf('一十') === 0) s = s.slice(1);
+    return s;
+  }
+
+  function readNumber(n){
+    if (n === 0) return '零';
+    if (n < 10000) return read4(n);
+    var hi = Math.floor(n/10000), lo = n % 10000;
+    var s = read4(hi) + '万';
+    if (lo) s += (lo < 1000 ? '零' : '') + read4(lo);
+    return s;
+  }
+
+  /* ============ 声音 ============ */
+  var AC = null;
+  function ac(){
+    if (!AC){
+      try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ AC = null; }
+    }
+    if (AC && AC.state === 'suspended') AC.resume();
+    return AC;
+  }
+
+  var lastClick = 0;
+  function beadClick(freq){
+    var ctx = ac(); if (!ctx) return;
+    var now = ctx.currentTime;
+    if (now - lastClick < 0.02) return;
+    lastClick = now;
+
+    // 木头碰木头的短促声：带通噪声 + 低音体
+    var dur = 0.042;
+    var buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate*dur), ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i=0;i<data.length;i++){
+      var t = i / data.length;
+      data[i] = (Math.random()*2-1) * Math.pow(1-t, 3.2);
+    }
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var bp = ctx.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.value = freq || 2600; bp.Q.value = 1.3;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(1.0, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start(now);
+
+    var o = ctx.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime((freq||2600)*0.16, now);
+    o.frequency.exponentialRampToValueAtTime((freq||2600)*0.11, now+0.05);
+    var g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0.16, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now+0.07);
+    o.connect(g2); g2.connect(ctx.destination);
+    o.start(now); o.stop(now+0.06);
+  }
+
+  var ZH_VOICE = null;
+  function pickVoice(){
+    try {
+      var vs = window.speechSynthesis.getVoices() || [];
+      for (var i=0;i<vs.length;i++){
+        if (/^zh/i.test(vs[i].lang)){ ZH_VOICE = vs[i]; return; }
+      }
+    } catch(e){}
+  }
+
+  function speak(text){
+    if (!('speechSynthesis' in window)) return 0;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      if (ZH_VOICE) u.voice = ZH_VOICE;
+      u.rate = CFG.speed === 'slow' ? 0.85 : CFG.speed === 'fast' ? 1.1 : 0.95;
+      u.pitch = 1;
+      window.speechSynthesis.speak(u);
+      return 1;
+    } catch(e){ return 0; }
+  }
+
+  /* ============ 算盘 ============ */
+  var GEO = { bw: 30, bh: 16, cw: 34, h: 190, beamTop: 62, beamH: 12, gap: 1 };
+
+  // 珠子和列宽跟着屏幕和列数走：4 列时尽量放大，8 列时自动收窄
+  function computeGeo(){
+    var stage = document.querySelector(".stage");
+    var stageW = (stage ? stage.clientWidth : 0) || Math.min(window.innerWidth - 12, 720);
+    var avail = stageW - 42;   // 外框左右内边距 32 + 列容器左右 10
+    var cw = Math.max(24, Math.min(72, Math.floor(avail / TOTAL_COLS)));
+    var bw = cw - 13;                                   // 列间留白
+    var bh = Math.max(12, Math.round(bw * 0.64));       // 珠子接近真算盘的厚薄
+    var gap = Math.max(3, Math.round(bh * 0.22));       // 珠子之间透气
+    var beamTop = Math.round(bh * 2.15);
+    var beamH = Math.round(bh * 0.45);
+    var lowerH = 4 * (bh + gap) + Math.round(bh * 1.15);
+    GEO = { bw: bw, bh: bh, cw: cw, gap: gap, beamTop: beamTop, beamH: beamH,
+            h: beamTop + beamH + lowerH };
+  }
+
+  var colsEl = [];   // { up, lows: [], el }
+  var TOTAL_COLS = 8;  // 盘面固定八列，启用的那几列在中间
+
+  function buildAbacus(){
+    computeGeo();
+    var host = document.getElementById('abacus');
+    var veilEl = document.getElementById('veil');   // 清空前先留住遮布
+    host.innerHTML = '';
+    colsEl = [];
+
+    var offset = Math.floor((TOTAL_COLS - CFG.cols) / 2);
+    G.offset = offset;
+
+    var inner = document.createElement('div');
+    inner.className = 'cols';
+    inner.style.height = GEO.h + 'px';
+
+    for (var i=0;i<TOTAL_COLS;i++){
+      var active = (i >= offset && i < offset + CFG.cols);
+      var col = document.createElement('div');
+      col.className = 'col' + (active ? '' : ' idle');
+      col.style.width = GEO.cw + 'px';
+      col.style.height = GEO.h + 'px';
+
+      var rod = document.createElement('div');
+      rod.className = 'rod';
+      col.appendChild(rod);
+
+      var up = document.createElement('div');
+      up.className = 'bead';
+      up.style.width = GEO.bw + 'px';
+      up.style.height = GEO.bh + 'px';
+      up.style.marginLeft = (-GEO.bw/2) + 'px';
+      up.addEventListener('click', makeDial(i, -1));
+      col.appendChild(up);
+
+      var lows = [];
+      for (var j=0;j<4;j++){
+        var b = document.createElement('div');
+        b.className = 'bead';
+        b.style.width = GEO.bw + 'px';
+        b.style.height = GEO.bh + 'px';
+        b.style.marginLeft = (-GEO.bw/2) + 'px';
+        b.addEventListener('click', makeDial(i, j));
+        col.appendChild(b);
+        lows.push(b);
+      }
+      inner.appendChild(col);
+      colsEl.push({ up: up, lows: lows, el: col });
+    }
+
+    // 横梁
+    var beam = document.createElement('div');
+    beam.className = 'beam';
+    beam.style.top = GEO.beamTop + 'px';
+    beam.style.height = GEO.beamH + 'px';
+    inner.appendChild(beam);
+
+    host.appendChild(inner);
+    if (veilEl) host.appendChild(veilEl);
+    setValue(0, true);
+  }
+
+  /* ---------- 手动拨珠 ---------- */
+  G.dial = [0,0,0,0,0,0,0,0];
+  G.offset = 0;
+
+  function makeDial(i, j){
+    return function(ev){
+      ev.stopPropagation();
+      onDial(i, j);
+    };
+  }
+
+  function paintCol(i, d){
+    var c = colsEl[i];
+    if (!c) return;
+    c.up.style.top = upTop(d >= 5) + 'px';
+    var lowN = d % 5;
+    for (var k=0;k<4;k++){
+      c.lows[k].style.top = lowTop(k, k < lowN) + 'px';
+    }
+  }
+
+  function dialValue(){
+    var v = 0, off = G.offset;
+    for (var k=0;k<CFG.cols;k++) v = v * 10 + (G.dial[off + k] || 0);
+    return v;
+  }
+
+  function onDial(i, j){
+    if (CFG.answerMode !== 'bead') return;
+    if (G.playing) return;
+    if (i < G.offset || i >= G.offset + CFG.cols) return;   // 灰列不准动
+
+    var d = G.dial[i] || 0;
+    if (j < 0){
+      // 上珠：拨上就加五，拨下就减五
+      d = (d >= 5) ? d - 5 : d + 5;
+    } else {
+      // 下珠：拨到第 j 颗
+      var low = d % 5;
+      var newLow = (j < low) ? j : j + 1;
+      d = (d >= 5 ? 5 : 0) + newLow;
+    }
+    G.dial[i] = d;
+    paintCol(i, d);
+    beadClick(j < 0 ? 2900 : 2200 + i * 70);
+  }
+
+  // 珠子坐标
+  function upTop(on){
+    return on ? (GEO.beamTop - GEO.bh - Math.round(GEO.bh * 0.15))
+              : Math.round(GEO.bh * 0.22);
+  }
+  function lowTop(j, on){
+    if (on) return GEO.beamTop + GEO.beamH + Math.round(GEO.bh * 0.18) + j * (GEO.bh + GEO.gap);
+    return GEO.h - (4 - j) * (GEO.bh + GEO.gap) + Math.round(GEO.bh * 0.1);
+  }
+
+  function setValue(v, silent){
+    var old = G.shown === undefined ? -1 : G.shown;
+    G.shown = v;
+    var changed = 0;
+
+    var offset = G.offset || 0;
+
+    for (var i=0;i<TOTAL_COLS;i++){
+      var idx = i - offset;
+      var inRange = (idx >= 0 && idx < CFG.cols);
+      var place = inRange ? Math.pow(10, CFG.cols-1-idx) : 0;
+      var d = inRange ? Math.floor(v / place) % 10 : 0;
+      var od = (inRange && old >= 0) ? Math.floor(old / place) % 10 : 0;
+
+      if (colsEl[i]) paintCol(i, d);
+      G.dial[i] = d;
+      if (!silent && d !== od) changed++;
+    }
+
+    if (!silent && changed){
+      // 从高位往低位响，像真拨珠
+      for (var k=0;k<changed;k++){
+        (function(kk){
+          setTimeout(function(){ beadClick(2300 + kk*90); }, kk*38);
+        })(k);
+      }
+    }
+  }
+
+  /* ============ 出题 ============ */
+  function randInt(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+
+  // 加数有几位：4 列配两位、5 列三位、六列四位、七列以上五位封顶
+  function digitsOf(cols){
+    return Math.max(2, Math.min(5, cols - 2));
+  }
+
+  function makeProblem(){
+    var cols = CFG.cols, count = CFG.count;
+    var MAX = Math.pow(10, cols) - 1;             // 算盘量程
+    var d = digitsOf(cols);
+    var lo = Math.pow(10, d-1), hi = Math.pow(10, d) - 1;  // 每个加数的位数区间
+
+    // 总和要落在 [count*lo, count*hi] 且不超过算盘量程
+    var cap = Math.min(MAX, hi * count);
+    var minSum = lo * count;
+    var target = randInt(minSum, Math.floor(cap * 0.88));
+
+    var parts = [], remain = target;
+    for (var i=0;i<count;i++){
+      var left = count - i - 1;
+      if (left === 0){ parts.push(remain); break; }
+      // 保证剩下的每个数都还装得进 [lo, hi]
+      var minN = Math.max(lo, remain - left * hi);
+      var maxN = Math.min(hi, remain - left * lo);
+      var mid = Math.round(remain / (left + 1));
+      var span = Math.floor((maxN - minN) * 0.42);
+      var a = Math.max(minN, Math.min(maxN, mid - span));
+      var b = Math.max(a, Math.min(maxN, mid + span));
+      var n = randInt(a, b);
+      parts.push(n);
+      remain -= n;
+    }
+
+    for (var j=parts.length-1;j>0;j--){
+      var k = Math.floor(Math.random()*(j+1));
+      var t = parts[j]; parts[j] = parts[k]; parts[k] = t;
+    }
+    return { seq: parts, sum: target, digits: d };
+  }
+
+  /* ============ 流程 ============ */
+  function $(id){ return document.getElementById(id); }
+  var elStatus = $('status'), elAnswer = $('answerBox'), elInput = $('answerInput');
+  var elResult = $('result'), elStart = $('btnStart'), elVeil = $('btnVeil');
+  var elSubmit = $('btnSubmit'), elAbacus = $('abacus');
+
+  function setStatus(html){ elStatus.innerHTML = html; }
+
+  // 遮布：手动遮住，或者到了作答阶段自动盖上
+  var elVeilBox = document.getElementById("veil");
+  var elStage = document.querySelector('.stage');
+  function syncVeil(){
+    var beadMode = (CFG.answerMode === 'bead');
+    var demoMode = (CFG.answerMode === 'demo');
+    var show = (!beadMode && !demoMode && G.masked) || (G.answering && !beadMode && !demoMode);
+    elVeilBox.classList.toggle("on", show);
+    elVeilBox.textContent = G.masked ? "遮住中" : "回忆中";
+    elVeil.disabled = beadMode || demoMode;
+    elVeil.style.opacity = (beadMode || demoMode) ? '.4' : '';
+    elAbacus.classList.toggle('dial', beadMode);
+    if (elStage) elStage.classList.toggle('veiled', show);
+  }
+
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  var elExpr = document.getElementById('expr');
+  function renderExpr(n, state){
+    if (!CFG.showExpr){ elExpr.style.display = 'none'; return; }
+    elExpr.style.display = 'flex';
+
+    if (!n && !state){
+      elExpr.className = 'expr empty';
+      elExpr.textContent = '式子在这里';
+      return;
+    }
+    var html = '';
+    for (var i=0;i<n;i++){
+      if (i) html += '<span class="op">+</span>';
+      html += '<span class="n">' + G.seq[i] + '</span>';
+    }
+    if (state === 'ask'){
+      html += '<span class="eq">=</span><span class="n q">?</span>';
+    } else if (state === 'done'){
+      html += '<span class="eq">=</span><span class="n q">' + G.sum + '</span>';
+    }
+    elExpr.className = 'expr';
+    elExpr.innerHTML = html;
+  }
+
+  function start(){
+    if (G.playing) return;
+    var p = makeProblem();
+    G.seq = p.seq;
+    G.sum = 0;
+    G.playing = true;
+    G.answering = false;
+    elResult.className = 'result';
+    elAnswer.classList.remove('on');
+    $('settings').style.opacity = '.35';
+    $('settings').style.pointerEvents = 'none';
+    elStart.disabled = true;
+    elStart.textContent = '进行中';
+    G.dial = [0,0,0,0,0,0,0,0];
+    setValue(0, true);
+    renderExpr(0);
+    syncVeil();
+
+    runSequence();
+  }
+
+  async function runSequence(){
+    await sleep(500);
+    var pace = SPEED[CFG.speed];
+
+    for (var i=0;i<G.seq.length;i++){
+      var n = G.seq[i];
+      var say = readNumber(n);
+
+      if (ZH_VOICE){
+        setStatus('第 <b>' + (i+1) + '</b> / ' + G.seq.length + ' 个数');
+        speak(say);
+        await sleep(260);
+      } else {
+        // 没装中文语音，退成看数
+        setStatus('第 <b>' + (i+1) + '</b> / ' + G.seq.length +
+                  ' 个数　<b style="font-size:15px">' + say + '</b>');
+        await sleep(Math.min(900, pace * 0.7));
+      }
+
+      G.sum += n;
+      setValue(G.sum);
+      renderExpr(i + 1);
+      await sleep(Math.max(300, pace - (ZH_VOICE ? 260 : 0)));
+    }
+
+    finishSequence();
+  }
+
+  function finishSequence(){
+    G.playing = false;
+    G.answering = true;
+    G.t0 = Date.now();
+    renderExpr(G.seq.length, 'ask');
+    syncVeil();
+    elAnswer.classList.add('on');
+
+    if (CFG.answerMode === 'bead'){
+      // 拨珠作答：盘面清空，交给你拨
+      G.dial = [0,0,0,0,0,0,0,0];
+      for (var i=0;i<TOTAL_COLS;i++) paintCol(i, 0);
+      elInput.style.display = 'none';
+      elSubmit.textContent = '确认';
+      setStatus('在算盘上拨出得数，然后按确认');
+    } else {
+      elInput.style.display = '';
+      elSubmit.textContent = '提交';
+      setStatus('听完 <b>' + G.seq.length + '</b> 个数，输入得数');
+      elInput.value = '';
+      elInput.focus();
+    }
+  }
+
+  function submit(){
+    if (!G.answering) return;
+    var raw = (CFG.answerMode === 'bead')
+      ? String(dialValue())
+      : elInput.value.replace(/[^\d]/g, '');
+    if (raw === '') return;
+    var ok = Number(raw) === G.sum;
+    // 交卷就算练了一组，记进练习日历
+    try{ document.dispatchEvent(new CustomEvent('zx:round')); }catch(e){}
+    G.answering = false;
+    syncVeil();
+    elAnswer.classList.remove('on');
+
+    renderExpr(G.seq.length, 'done');
+    elResult.className = 'result on ' + (ok ? 'ok' : 'no');
+    elResult.innerHTML =
+      '<div class="big">' + (ok ? '对' : '错') + '</div>' +
+      '<div class="sub">得数 <b>' + G.sum + '</b>' +
+        (ok ? '' : '　你写的 <b>' + raw + '</b>') + '</div>' +
+      '<div class="sub" style="margin-top:8px">' + G.seq.join(' + ') + ' = ' + G.sum + '</div>';
+
+    setStatus('再来一组，或者换难度');
+    $('settings').style.opacity = '';
+    $('settings').style.pointerEvents = '';
+    elStart.disabled = false;
+    elStart.textContent = '开始';
+  }
+
+  /* ============ 演示：打百子 ============ */
+  var DEMO_MS = 520;                       // 每加一个数走一步，接近正常拨珠速度
+  var demo = { on:false, timer:null, n:0, total:0 };
+
+  function setDemoLabel(running){
+    [].forEach.call($('segAnswer').children, function(c){
+      if (c.getAttribute('data-v') === 'demo'){
+        c.textContent = running ? '停止' : '演示';
+        c.classList.toggle('demoing', running);
+      }
+    });
+  }
+
+  function showDemo(before, add, after){
+    elExpr.style.display = 'flex';
+    elExpr.className = 'expr';
+    elExpr.innerHTML = '<span class="n">' + before + '</span>' +
+      '<span class="op">+</span><span class="n">' + add + '</span>' +
+      '<span class="eq">=</span><span class="n q">' + after + '</span>';
+  }
+
+  function startDemo(){
+    if (demo.on || G.playing) return;
+    demo.on = true;
+    demo.n = 0;
+    demo.total = 0;
+    G.masked = false;
+    G.answering = false;
+    $('veil').classList.remove('on');
+    elVeil.classList.remove('on');
+    elVeil.textContent = '遮住算盘';
+    elAnswer.classList.remove('on');
+    elResult.className = 'result';
+    setValue(0, true);
+    elStart.disabled = true;
+    elStart.textContent = '演示中';
+    setDemoLabel(true);
+    syncVeil();
+    demo.timer = setTimeout(demoStep, 320);
+  }
+
+  function demoStep(){
+    if (!demo.on) return;
+    demo.timer = null;
+    var before = demo.total;
+    demo.n++;
+    demo.total += demo.n;
+    setValue(demo.total, false);            // 拨珠声跟着走
+    showDemo(before, demo.n, demo.total);
+    setStatus('打百子 · 加到 <b>' + demo.n + '</b> · 累计 <b>' + demo.total + '</b>');
+    if (demo.n >= 100){ finishDemo(); return; }
+    // 过 666（加到 36）之后放慢，速度约为原来的 0.75
+    var wait = demo.n >= 36 ? Math.round(DEMO_MS / 0.75) : DEMO_MS;
+    demo.timer = setTimeout(demoStep, wait);
+  }
+
+  function finishDemo(){
+    demo.on = false;
+    if (demo.timer){ clearTimeout(demo.timer); demo.timer = null; }
+    elStart.disabled = false;
+    elStart.textContent = '开始';
+    setDemoLabel(false);
+    elExpr.style.display = 'flex';
+    elExpr.className = 'expr';
+    elExpr.innerHTML = '<span class="n">1</span><span class="op">+</span><span class="n">2</span>' +
+      '<span class="op">+</span><span class="op">…</span><span class="op">+</span><span class="n">100</span>' +
+      '<span class="eq">=</span><span class="n q">5050</span>';
+    setStatus('打百子完成 · 1 加到 100 = <b>5050</b>');
+    syncVeil();
+  }
+
+  function stopDemo(quiet){
+    if (demo.timer){ clearTimeout(demo.timer); demo.timer = null; }
+    if (!demo.on) return;
+    demo.on = false;
+    elStart.disabled = false;
+    elStart.textContent = '开始';
+    setDemoLabel(false);
+    if (!quiet) setStatus('演示停在 <b>' + demo.n + '</b> · 盘面 <b>' + demo.total + '</b>');
+    syncVeil();
+  }
+
+  /* ============ 界面 ============ */
+  function buildSeg(host, items, key, fmt){
+    host.innerHTML = '';
+    items.forEach(function(v){
+      var b = document.createElement('button');
+      b.textContent = fmt ? fmt(v) : v;
+      b.setAttribute('data-v', String(v));
+      b.className = (CFG[key] === v) ? 'on' : '';
+      b.addEventListener('click', function(){
+        if (G.playing) return;
+        CFG[key] = v;
+        [].forEach.call(host.children, function(c){ c.classList.remove('on'); });
+        b.classList.add('on');
+        if (key === 'cols') buildAbacus();
+        if (key === 'showExpr'){ renderExpr(0); }
+        if (key === 'answerMode'){
+          if (CFG.answerMode === 'bead') G.masked = false;
+          elVeil.classList.toggle('on', false);
+          elVeil.textContent = '遮住算盘';
+          elInput.style.display = '';
+          elSubmit.textContent = '提交';
+          if (CFG.answerMode === 'demo'){
+            G.masked = false;
+            if (demo.on) stopDemo(false); else startDemo();
+          } else if (demo.on || demo.n){
+            stopDemo(true);
+            renderExpr(0);
+          }
+          syncVeil();
+        }
+        updateHint();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function digitsWord(d){ return ['','一','两','三','四','五'][d] + '位数相加'; }
+
+  function updateHint(){
+    if (CFG.answerMode === 'demo') return;   // 演示自己管状态栏
+    setStatus('现在：<b>' + CFG.cols + '</b> 列 · ' + digitsWord(digitsOf(CFG.cols)) +
+              ' · <b>' + CFG.count + '</b> 个数 · ' + SPEED_LABEL[CFG.speed] + '速');
+  }
+
+  /* ============ 口诀 ============ */
+  var ADD_FORMULA = [
+    { title:'直加（珠够，直接上）', items:['一上一','二上二','三上三','四上四','五上五','六上六','七上七','八上八','九上九'] },
+    { title:'满五加（下珠不够，拨上珠）', items:['一下五去四','二下五去三','三下五去二','四下五去一'] },
+    { title:'进位加（满十去几进一）', items:['一去九进一','二去八进一','三去七进一','四去六进一','五去五进一','六去四进一','七去三进一','八去二进一','九去一进一'] },
+    { title:'破五进一（六至九）', items:['六上一去五进一','七上二去五进一','八上三去五进一','九上四去五进一'] }
+  ];
+
+  function renderAdd(){
+    var h = '';
+    ADD_FORMULA.forEach(function(g){
+      h += '<div class="f-group"><h3>' + g.title + '</h3><div class="f-grid">';
+      g.items.forEach(function(t){ h += '<div class="f-cell">' + t + '</div>'; });
+      h += '</div></div>';
+    });
+    document.getElementById('formulaBody').innerHTML = h;
+  }
+
+  function renderMul(){
+    var h = '<div class="f-group"><div class="f-grid">';
+    for (var i=1;i<=9;i++){
+      for (var j=1;j<=9;j++){
+        h += '<div class="f-cell mul">' + i + '×' + j + '=<em>' + (i*j) + '</em></div>';
+      }
+    }
+    h += '</div></div>';
+    document.getElementById('formulaBody').innerHTML = h;
+  }
+
+  /* ============ 事件 ============ */
+  $('btnClear').addEventListener('click', function(){
+    setValue(0, false);           // 清零并响一声
+  });
+
+  elStart.addEventListener('click', start);
+  $('btnSubmit').addEventListener('click', submit);
+  elInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+
+  elVeil.addEventListener('click', function(){
+    G.masked = !G.masked;
+    $('veil').classList.toggle('on', G.masked);
+    elVeil.classList.toggle('on', G.masked);
+    elVeil.textContent = G.masked ? '露出算盘' : '遮住算盘';
+    syncVeil();
+  });
+
+  $('btnFormula').addEventListener('click', function(){
+    document.getElementById('formulaOverlay').classList.add('on');
+    renderAdd();
+    document.getElementById('tabAdd').classList.add('on');
+    document.getElementById('tabMul').classList.remove('on');
+  });
+  $('btnCloseFormula').addEventListener('click', function(){
+    document.getElementById('formulaOverlay').classList.remove('on');
+  });
+  document.getElementById('formulaOverlay').addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('on');
+  });
+  $('tabAdd').addEventListener('click', function(){ renderAdd(); this.classList.add('on'); $('tabMul').classList.remove('on'); });
+  $('tabMul').addEventListener('click', function(){ renderMul(); this.classList.add('on'); $('tabAdd').classList.remove('on'); });
+
+  /* ============ 启动 ============ */
+  buildSeg($('segCols'), [4,5,6,7,8], 'cols', function(v){ return v + ' 列'; });
+  buildSeg($('segCount'), [3,5,7,10,15], 'count');
+  buildSeg($('segSpeed'), ['slow','mid','fast'], 'speed', function(v){ return SPEED_LABEL[v]; });
+  buildSeg($('segExpr'), [true, false], 'showExpr', function(v){ return v ? '显示' : '隐藏'; });
+  buildSeg($('segAnswer'), ['type','bead','demo'], 'answerMode',
+           function(v){ return v === 'bead' ? '拨珠' : v === 'demo' ? '演示' : '键盘'; });
+  buildAbacus();
+  updateHint();
+  var rzT = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(rzT);
+    rzT = setTimeout(function(){ buildAbacus(); setValue(G.shown || 0, true); }, 200);
+  });
+  syncVeil();
+  if ("speechSynthesis" in window){
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
+})();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function keyOf(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function todayKey(){ return keyOf(new Date()); }
+
+  /* ================= 农历 ================= */
+  var LUNAR_INFO = [0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2, 0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977, 0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970, 0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950, 0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557, 0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0, 0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0, 0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6, 0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570, 0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0, 0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5, 0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930, 0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530, 0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45, 0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0, 0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0, 0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4, 0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0, 0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160, 0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252, 0x0d520];
+  var GAN = '甲乙丙丁戊己庚辛壬癸';
+  var ZHI = '子丑寅卯辰巳午未申酉戌亥';
+  var MONTH_CN = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+  var NUM_CN = ['一','二','三','四','五','六','七','八','九','十'];
+
+  function leapMonth(y){ return LUNAR_INFO[y-1900] & 0xf; }
+  function leapDays(y){
+    if (!leapMonth(y)) return 0;
+    return (LUNAR_INFO[y-1900] & 0x10000) ? 30 : 29;
+  }
+  function monthDays(y, m){ return (LUNAR_INFO[y-1900] & (0x10000 >> m)) ? 30 : 29; }
+  function yearDays(y){
+    var sum = 348;
+    for (var i = 0x8000; i > 0x8; i >>= 1){ sum += (LUNAR_INFO[y-1900] & i) ? 1 : 0; }
+    return sum + leapDays(y);
+  }
+  function dayName(d){
+    if (d === 10) return '初十';
+    if (d === 20) return '二十';
+    if (d === 30) return '三十';
+    var tens = Math.floor(d / 10), unit = d % 10;
+    return ['初','十','廿','三'][tens] + NUM_CN[unit - 1];
+  }
+  function solar2lunar(y, m, d){
+    if (y < 1900 || y > 2100) return null;
+    var offset = Math.round((Date.UTC(y, m-1, d) - Date.UTC(1900, 0, 31)) / 86400000);
+    var i, temp = 0;
+    for (i = 1900; i < 2101 && offset > 0; i++){
+      temp = yearDays(i);
+      offset -= temp;
+    }
+    if (offset < 0){ offset += temp; i--; }
+    var year = i, leap = leapMonth(year), isLeap = false;
+    for (i = 1; i < 13 && offset > 0; i++){
+      if (leap > 0 && i === leap + 1 && !isLeap){
+        --i; isLeap = true; temp = leapDays(year);
+      } else {
+        temp = monthDays(year, i);
+      }
+      if (isLeap && i === leap + 1) isLeap = false;
+      offset -= temp;
+    }
+    if (offset === 0 && leap > 0 && i === leap + 1){
+      if (isLeap){ isLeap = false; } else { isLeap = true; --i; }
+    }
+    if (offset < 0){ offset += temp; --i; }
+    var month = i, day = offset + 1;
+    var gz = (year - 4) % 60;
+    return {
+      y: year, m: month, d: day, isLeap: isLeap,
+      monthCn: (isLeap ? '闰' : '') + MONTH_CN[month-1] + '月',
+      dayCn: dayName(day),
+      text: GAN.charAt(gz % 10) + ZHI.charAt(gz % 12) + '年 ' +
+            (isLeap ? '闰' : '') + MONTH_CN[month-1] + '月' + dayName(day)
+    };
+  }
+  function lunarShort(y, m, d){
+    var l = solar2lunar(y, m, d);
+    if (!l) return '';
+    return l.d === 1 ? l.monthCn : l.dayCn;
+  }
+
+  /* ================= 二十四节气 ================= */
+  var TERM_NAMES = ['春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋',
+                    '处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至','小寒',
+                    '大寒','立春','雨水','惊蛰'];
+  function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+  function sunLongitude(jd){
+    var T = (jd - 2451545.0) / 36525;
+    var L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
+    var M = 357.52911 + 35999.05029 * T - 0.0001537 * T * T;
+    var Mr = M * Math.PI / 180;
+    var C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(Mr)
+          + (0.019993 - 0.000101 * T) * Math.sin(2 * Mr)
+          + 0.000289 * Math.sin(3 * Mr);
+    var omega = (125.04 - 1934.136 * T) * Math.PI / 180;
+    var lambda = L0 + C - 0.00569 - 0.00478 * Math.sin(omega);
+    return ((lambda % 360) + 360) % 360;
+  }
+  function julianDay(y, m, d){
+    if (m <= 2){ y -= 1; m += 12; }
+    var A = Math.floor(y / 100);
+    var B = 2 - A + Math.floor(A / 4);
+    return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5;
+  }
+  var termCache = {};
+  function termsOfYear(year){
+    if (termCache[year]) return termCache[year];
+    var map = {};
+    var jd0 = julianDay(year, 1, 1) - 2;
+    var jdEnd = julianDay(year + 1, 1, 1) - 1;
+    var prev = sunLongitude(jd0);
+    for (var k = 1; jd0 + k <= jdEnd; k++){
+      var jd = jd0 + k;
+      var lon = sunLongitude(jd);
+      var diff = lon - prev;
+      if (diff < 0) diff += 360;
+      if (diff > 0 && diff < 5){
+        var start = Math.ceil(prev / 15) * 15;
+        for (var a = start; a < prev + diff + 1e-9; a += 15){
+          var frac = (a - prev) / diff;
+          if (frac < 0) frac = 0;
+          if (frac > 1) frac = 1;
+          var jdx = jd0 + k - 1 + frac;
+          var dt = new Date((jdx - 2440587.5 + 8 / 24) * 86400000);
+          var mm = dt.getUTCMonth() + 1, dd = dt.getUTCDate();
+          var lonIdx = Math.round((((a % 360) + 360) % 360) / 15) % 24;
+          map[pad2(mm) + '-' + pad2(dd)] = TERM_NAMES[lonIdx];
+        }
+      }
+      prev = lon;
+    }
+    termCache[year] = map;
+    return map;
+  }
+
+  /* ================= 标注数据 ================= */
+  var CAL_DATA = {"types":{"fest":{"label":"节日","color":"#D64541","bg":"#FBE9E8","rank":0},"term":{"label":"节气","color":"#2F6B4F","bg":"#E7F1EA","rank":1},"birth":{"label":"诞辰·纪念","color":"#A4402F","bg":"#F7E6E2","rank":2},"mem":{"label":"逝世·牺牲","color":"#8A7355","bg":"#F0ECE3","rank":3},"warn":{"label":"警示·反思","color":"#A8762A","bg":"#F8EFDC","rank":4}},"rank":{"fest":0,"term":1,"birth":2,"mem":3,"warn":4},"solarEvents":[{"m":1,"d":1,"s":"元旦","f":"元旦","t":"fest"},{"m":1,"d":8,"s":"周恩来","f":"周恩来逝世纪念日（1976）","t":"mem"},{"m":1,"d":12,"s":"刘胡兰","f":"刘胡兰纪念日（1947 就义）","t":"mem","n":"“生的伟大，死的光荣”，年龄最小的女烈士"},{"m":1,"d":21,"s":"列宁","f":"列宁逝世纪念日（1924）","t":"mem"},{"m":1,"d":27,"s":"宋庆龄","f":"宋庆龄诞辰（1893）","t":"birth","n":"共和国名誉主席，“国之瑰宝”"},{"m":2,"d":4,"s":"邓颖超","f":"邓颖超诞辰（1904）","t":"birth"},{"m":2,"d":7,"s":"二七","f":"二七纪念日（1923）","t":"birth","n":"京汉铁路大罢工，中共早期工运起点"},{"m":2,"d":23,"s":"杨靖宇","f":"杨靖宇纪念日（1940 牺牲）","t":"mem","n":"东北抗联主要创建者"},{"m":3,"d":5,"s":"学雷锋","f":"学雷锋纪念日","t":"birth"},{"m":3,"d":5,"s":"周恩来","f":"周恩来诞辰（1898）","t":"birth"},{"m":3,"d":5,"s":"何泽慧","f":"何泽慧诞辰（1914）","t":"birth","n":"核物理学家，“中国居里夫人”，与钱三强共发现铀三分裂、四分裂"},{"m":3,"d":7,"s":"竺可桢","f":"竺可桢诞辰（1890）","t":"birth","n":"中国现代气象学、地理学奠基人"},{"m":3,"d":8,"s":"妇女节","f":"三八妇女节","t":"fest"},{"m":3,"d":13,"s":"赖宁","f":"赖宁纪念日（1988 救火牺牲）","t":"mem","n":"少年英雄，“英雄少年”"},{"m":3,"d":14,"s":"马克思","f":"马克思逝世纪念日（1883）","t":"mem"},{"m":3,"d":18,"s":"巴黎公社","f":"巴黎公社纪念日（1871 起义）","t":"birth","n":"人类第一个无产阶级政权尝试"},{"m":3,"d":28,"s":"高尔基","f":"高尔基诞辰（1868）","t":"birth","n":"苏联文学奠基人"},{"m":4,"d":22,"s":"列宁","f":"列宁诞辰（1870）","t":"birth"},{"m":4,"d":24,"s":"航天日","f":"中国航天日","t":"birth","n":"1970 东方红一号发射成功"},{"m":5,"d":1,"s":"劳动节","f":"国际劳动节","t":"fest"},{"m":5,"d":4,"s":"青年节","f":"五四青年节（1919）","t":"fest"},{"m":5,"d":5,"s":"马克思","f":"马克思诞辰（1818）","t":"birth"},{"m":5,"d":9,"s":"卫国战争","f":"苏联卫国战争胜利纪念日（1945）","t":"mem"},{"m":5,"d":14,"s":"焦裕禄","f":"焦裕禄纪念日（1964 病逝）","t":"mem","n":"“县委书记的榜样”"},{"m":5,"d":28,"s":"童第周","f":"童第周诞辰（1902）","t":"birth","n":"实验胚胎学奠基人，“中国克隆之父”"},{"m":5,"d":29,"s":"宋庆龄","f":"宋庆龄逝世纪念日（1981）","t":"mem"},{"m":5,"d":30,"s":"五卅","f":"五卅纪念日（1925）","t":"birth","n":"反帝爱国运动"},{"m":6,"d":1,"s":"儿童节","f":"六一儿童节","t":"fest"},{"m":6,"d":3,"s":"虎门销烟","f":"虎门销烟纪念日（1839）","t":"warn","n":"林则徐开始销烟"},{"m":6,"d":25,"s":"邓稼先","f":"邓稼先诞辰（1924）","t":"birth","n":"“两弹元勋”"},{"m":6,"d":26,"s":"禁毒日","f":"国际禁毒日","t":"warn"},{"m":7,"d":1,"s":"建党节","f":"七一建党节","t":"fest"},{"m":7,"d":6,"s":"朱德","f":"朱德逝世纪念日（1976）","t":"mem"},{"m":7,"d":7,"s":"七七","f":"七七抗战警示日（1937）","t":"warn","n":"卢沟桥事变"},{"m":7,"d":11,"s":"邓颖超","f":"邓颖超逝世纪念日（1992）","t":"mem"},{"m":7,"d":15,"s":"秋瑾","f":"秋瑾纪念日（1907 就义）","t":"mem","n":"“鉴湖女侠”，近代民主革命女先驱"},{"m":7,"d":31,"s":"731","f":"731 部队反人类罪行警示日","t":"warn"},{"m":8,"d":1,"s":"建军节","f":"八一建军节（1927 南昌起义）","t":"fest"},{"m":8,"d":2,"s":"赵一曼","f":"赵一曼纪念日（1936 就义）","t":"mem","n":"东北抗日联军女政委"},{"m":8,"d":5,"s":"恩格斯","f":"恩格斯逝世纪念日（1895）","t":"mem"},{"m":8,"d":19,"s":"八一九","f":"苏联八一九事件反思日（1991）","t":"warn"},{"m":9,"d":3,"s":"抗战胜利","f":"中国抗日战争胜利纪念日（1945）","t":"birth"},{"m":9,"d":4,"s":"向警予","f":"向警予诞辰（1895）","t":"birth","n":"中共唯一女创始人，妇女运动领袖"},{"m":9,"d":9,"s":"毛泽东","f":"毛泽东逝世纪念日（1976）","t":"mem"},{"m":9,"d":18,"s":"九一八","f":"九一八警示日（1931）","t":"warn","n":"东北沦陷，多地鸣警报"},{"m":9,"d":25,"s":"鲁迅","f":"鲁迅诞辰（1881）","t":"birth"},{"m":9,"d":30,"s":"烈士纪念","f":"烈士纪念日","t":"mem"},{"m":10,"d":1,"s":"国庆节","f":"十一国庆节","t":"fest"},{"m":10,"d":10,"s":"辛亥革命","f":"辛亥革命纪念日（1911 武昌起义）","t":"birth"},{"m":10,"d":16,"s":"钱三强","f":"钱三强诞辰（1913）","t":"birth","n":"中国原子能科学之父，“两弹一星”元勋"},{"m":10,"d":19,"s":"鲁迅","f":"鲁迅逝世纪念日（1936）","t":"mem"},{"m":10,"d":21,"s":"缪伯英","f":"缪伯英诞辰（1899）","t":"birth","n":"中共第一位女党员"},{"m":10,"d":26,"s":"李四光","f":"李四光诞辰（1889）","t":"birth","n":"中国地质力学创立者"},{"m":11,"d":7,"s":"十月革命","f":"十月革命节（1917）","t":"birth"},{"m":11,"d":12,"s":"华罗庚","f":"华罗庚诞辰（1910）","t":"birth","n":"中国现代数学之父"},{"m":11,"d":12,"s":"白求恩","f":"白求恩纪念日（1939 逝世）","t":"mem"},{"m":11,"d":14,"s":"江竹筠","f":"江竹筠（江姐）纪念日（1949 就义）","t":"mem","n":"红岩英烈代表"},{"m":11,"d":28,"s":"恩格斯","f":"恩格斯诞辰（1820）","t":"birth"},{"m":11,"d":29,"s":"孔繁森","f":"孔繁森纪念日（1994 殉职）","t":"mem","n":"援藏干部楷模"},{"m":12,"d":1,"s":"朱德","f":"朱德诞辰（1886）","t":"birth"},{"m":12,"d":5,"s":"郭永怀","f":"郭永怀纪念日（1968 空难殉职）","t":"mem","n":"“两弹一星”唯一烈士，以生命守护绝密数据"},{"m":12,"d":9,"s":"一二九","f":"一二·九运动纪念日（1935）","t":"birth","n":"北平学生抗日救亡"},{"m":12,"d":11,"s":"钱学森","f":"钱学森诞辰（1911）","t":"birth","n":"中国航天之父、导弹之父"},{"m":12,"d":13,"s":"公祭日","f":"南京大屠杀死难者国家公祭日","t":"mem"},{"m":12,"d":23,"s":"林巧稚","f":"林巧稚诞辰（1901）","t":"birth","n":"中国妇产科学奠基人"},{"m":12,"d":25,"s":"苏联解体","f":"苏联解体反思日（1991）","t":"warn"},{"m":12,"d":26,"s":"毛泽东","f":"毛泽东诞辰（1893）","t":"birth"}],"lunarEvents":[{"m":1,"d":1,"s":"春节","f":"春节","t":"fest"},{"m":1,"d":15,"s":"元宵","f":"元宵节","t":"fest"},{"m":3,"d":3,"s":"宜春游","f":"三月三 · 宜春游","t":"fest"},{"m":5,"d":5,"s":"端午","f":"端午节","t":"fest"},{"m":7,"d":7,"s":"宜乞巧","f":"七月七 · 宜乞巧","t":"fest"},{"m":7,"d":15,"s":"中元","f":"中元节","t":"fest"},{"m":8,"d":15,"s":"中秋","f":"中秋节","t":"fest"},{"m":9,"d":9,"s":"重阳","f":"重阳节","t":"fest"},{"m":10,"d":1,"s":"送寒衣","f":"十月初一 · 送寒衣","t":"fest"},{"m":12,"d":8,"s":"腊八","f":"腊八节","t":"fest"}]};
+
+  function esc(v){
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function typeInfo(t){
+    return (CAL_DATA.types && CAL_DATA.types[t]) || { label: t || '标注', color: '#8C8577', bg: '#F7F1E6' };
+  }
+  function eventsOf(y, m, d, L){
+    var out = [], md = pad2(m) + '-' + pad2(d), i;
+    var term = termsOfYear(y)[md];
+    if (term) out.push({ s: term, f: term, t: 'term' });
+    for (i = 0; i < CAL_DATA.solarEvents.length; i++){
+      var e = CAL_DATA.solarEvents[i];
+      if (e.m === m && e.d === d) out.push(e);
+    }
+    if (L && !L.isLeap){
+      for (i = 0; i < CAL_DATA.lunarEvents.length; i++){
+        var le = CAL_DATA.lunarEvents[i];
+        if (le.m === L.m && le.d === L.d) out.push(le);
+      }
+    }
+    var rank = CAL_DATA.rank || {};
+    out.sort(function(a, b){
+      var ra = rank[a.t] == null ? 9 : rank[a.t];
+      var rb = rank[b.t] == null ? 9 : rank[b.t];
+      return ra - rb;
+    });
+    return out;
+  }
+
+  /* ================= 练习记录 ================= */
+  var CAL_KEY = 'zhuxin.practice.v1';
+
+  function loadDays(){
+    var out = {};
+    try{
+      var o = JSON.parse(localStorage.getItem(CAL_KEY) || '{}');
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
+      for (var k in o){
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+        var n = Math.floor(Number(o[k]));
+        if (isFinite(n) && n > 0) out[k] = Math.min(9999, n);
+      }
+    }catch(e){}
+    return out;
+  }
+  var DAYS = loadDays();
+  function saveDays(){ try{ localStorage.setItem(CAL_KEY, JSON.stringify(DAYS)); }catch(e){} }
+
+  document.addEventListener('zx:round', function(){
+    var k = todayKey();
+    DAYS[k] = (DAYS[k] || 0) + 1;
+    saveDays();
+    if ($('calOverlay').classList.contains('on')) renderCal();
+  });
+
+  var viewY = 0, viewM = 0, selKey = '';
+  function resetView(){
+    var d = new Date();
+    viewY = d.getFullYear(); viewM = d.getMonth(); selKey = todayKey();
+  }
+  function monthSum(y, m){
+    var pre = y + '-' + pad(m+1), sum = 0;
+    for (var k in DAYS){ if (k.slice(0,7) === pre) sum += DAYS[k]; }
+    return sum;
+  }
+  function streak(){
+    var days = 0, d = new Date();
+    if (!DAYS[keyOf(d)]) d.setDate(d.getDate() - 1);   // 今天还没练，从昨天往前数
+    while (DAYS[keyOf(d)] && days < 3650){ days++; d.setDate(d.getDate() - 1); }
+    return days;
+  }
+
+  function renderDetail(){
+    var p = selKey.split('-');
+    var y = Number(p[0]), m = Number(p[1]), d = Number(p[2]);
+    var L = solar2lunar(y, m, d);
+    var ev = eventsOf(y, m, d, L);
+    var week = ['日','一','二','三','四','五','六'][new Date(y, m-1, d).getDay()];
+    var n = DAYS[selKey] || 0;
+
+    var h = '<div class="cal-dhead"><b>' + m + ' 月 ' + d + ' 日</b>' +
+            '<span>星期' + week + (L ? ' · ' + esc(L.text) : '') + '</span></div>';
+    if (ev.length){
+      h += '<div class="cal-evs">';
+      for (var i = 0; i < ev.length; i++){
+        var e = ev[i], ti = typeInfo(e.t);
+        h += '<div class="cal-ev">' +
+               '<span class="cal-tag" style="color:' + ti.color + ';background:' + ti.bg + '">' + esc(ti.label) + '</span>' +
+               '<div class="cal-ev-main"><b>' + esc(e.f || e.s) + '</b>' +
+                 (e.n ? '<small>' + esc(e.n) + '</small>' : '') +
+               '</div></div>';
+      }
+      h += '</div>';
+    } else {
+      h += '<div class="cal-empty">这天没有标注</div>';
+    }
+    h += '<div class="cal-practice">' + (n ? '这天练了 <b>' + n + '</b> 组' : '这天没有练习记录') + '</div>';
+    $('calDetail').innerHTML = h;
+  }
+
+  function renderCal(){
+    $('calMonth').textContent = viewY + ' 年 ' + (viewM + 1) + ' 月';
+    $('calTodayN').textContent = DAYS[todayKey()] || 0;
+    $('calMonthN').textContent = monthSum(viewY, viewM);
+    $('calStreak').textContent = streak();
+
+    var first = (new Date(viewY, viewM, 1).getDay() + 6) % 7;   // 周一打头
+    var len = new Date(viewY, viewM + 1, 0).getDate();
+    var tk = todayKey();
+    var h = '', i, d, k, n, L, ev, top, label, cls;
+    for (i = 0; i < first; i++) h += '<div class="cal-day blank"></div>';
+    for (d = 1; d <= len; d++){
+      k = viewY + '-' + pad(viewM+1) + '-' + pad(d);
+      n = DAYS[k] || 0;
+      L = solar2lunar(viewY, viewM + 1, d);
+      ev = eventsOf(viewY, viewM + 1, d, L);
+      top = ev[0];
+      label = top ? top.s : (L ? lunarShort(viewY, viewM + 1, d) : '');
+      cls = top ? 'ev-' + top.t : 'lunar';
+      h += '<button type="button" class="cal-day' +
+             (k === tk ? ' today' : '') +
+             (k === selKey ? ' sel' : '') +
+             '" data-day="' + k + '">' +
+             '<span class="num">' + d + '</span>' +
+             '<span class="lbl ' + cls + '">' + esc(label) + '</span>' +
+             (n ? '<i class="cal-pdot"></i>' : '') +
+           '</button>';
+    }
+    $('calGrid').innerHTML = h;
+    renderDetail();
+  }
+
+  /* ================= 练习计时 ================= */
+  var T_KEY = 'zhuxin.timer.v1';
+
+  function loadTimer(){
+    var o = {};
+    try{
+      o = JSON.parse(localStorage.getItem(T_KEY) || '{}') || {};
+      if (typeof o !== 'object' || Array.isArray(o)) o = {};
+    }catch(e){ o = {}; }
+    var t = {
+      date: /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : todayKey(),
+      today: Math.floor(Number(o.today)) || 0,
+      total: Math.floor(Number(o.total)) || 0,
+      paused: !!o.paused
+    };
+    if (t.today < 0) t.today = 0;
+    if (t.total < 0) t.total = 0;
+    if (t.date !== todayKey()){ t.date = todayKey(); t.today = 0; }
+    return t;
+  }
+  var T = loadTimer();
+  var session = 0, last = Date.now(), lastSave = 0, visible = !document.hidden;
+
+  function saveTimer(){ try{ localStorage.setItem(T_KEY, JSON.stringify(T)); }catch(e){} }
+  function flush(){
+    var now = Date.now();
+    if (!T.paused && visible){
+      var d = Math.floor((now - last) / 1000);
+      if (d > 0){ session += d; T.today += d; T.total += d; }
+    }
+    last = now;
+  }
+  function fmt(sec){
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    return pad(Math.floor(sec/3600)) + ':' + pad(Math.floor((sec%3600)/60)) + ':' + pad(sec%60);
+  }
+  function renderTimer(){
+    if (!$('timerOverlay').classList.contains('on')) return;
+    $('timerToday').textContent = fmt(T.today);
+    $('timerSession').textContent = fmt(session);
+    $('timerTotal').textContent = fmt(T.total);
+    $('timerStatus').textContent = T.paused ? '已暂停' : '计时中';
+    $('timerStatus').classList.toggle('paused', T.paused);
+    $('timerToggle').textContent = T.paused ? '继续' : '暂停';
+  }
+  function syncTimerBtn(){ $('btnTimer').classList.toggle('paused', T.paused); }
+
+  setInterval(function(){
+    if (todayKey() !== T.date){ flush(); T.date = todayKey(); T.today = 0; }
+    flush();
+    var now = Date.now();
+    if (now - lastSave > 5000){ saveTimer(); lastSave = now; }
+    renderTimer();
+  }, 1000);
+
+  document.addEventListener('visibilitychange', function(){
+    flush();
+    visible = !document.hidden;
+    last = Date.now();
+    saveTimer();
+    renderTimer();
+  });
+  window.addEventListener('pagehide', function(){ flush(); saveTimer(); });
+
+  /* ================= 弹层开关 ================= */
+  function closeAll(){ ['formulaOverlay','calOverlay','timerOverlay'].forEach(function(id){ $(id).classList.remove('on'); }); }
+  function openOnly(id){ closeAll(); $(id).classList.add('on'); }
+
+  $('btnCal').addEventListener('click', function(){ resetView(); renderCal(); openOnly('calOverlay'); });
+  $('btnTimer').addEventListener('click', function(){ renderTimer(); openOnly('timerOverlay'); });
+  $('btnCloseCal').addEventListener('click', function(){ $('calOverlay').classList.remove('on'); });
+  $('btnCloseTimer').addEventListener('click', function(){ $('timerOverlay').classList.remove('on'); });
+  ['calOverlay','timerOverlay'].forEach(function(id){
+    $(id).addEventListener('click', function(e){ if (e.target === this) this.classList.remove('on'); });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){ $('calOverlay').classList.remove('on'); $('timerOverlay').classList.remove('on'); }
+  });
+
+  $('calGrid').addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.cal-day') : null;
+    if (!b || b.classList.contains('blank')) return;
+    selKey = b.getAttribute('data-day');
+    renderCal();
+  });
+  $('calPrev').addEventListener('click', function(){
+    viewM--; if (viewM < 0){ viewM = 11; viewY--; }
+    renderCal();
+  });
+  $('calNext').addEventListener('click', function(){
+    viewM++; if (viewM > 11){ viewM = 0; viewY++; }
+    renderCal();
+  });
+  $('calToday').addEventListener('click', function(){ resetView(); renderCal(); });
+
+  $('timerToggle').addEventListener('click', function(){
+    flush();
+    T.paused = !T.paused;
+    last = Date.now();
+    saveTimer(); syncTimerBtn(); renderTimer();
+  });
+  $('timerReset').addEventListener('click', function(){
+    if (!confirm('把今天的练习时间清零？')) return;
+    flush();
+    T.today = 0; session = 0; last = Date.now();
+    saveTimer(); renderTimer();
+  });
+
+  syncTimerBtn();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
