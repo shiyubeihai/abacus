@@ -72,7 +72,8 @@
     flex:none; width:46px; height:46px; border-radius:12px; overflow:hidden;
     box-shadow:0 1px 4px rgba(120,100,60,.16);
   }
-  .card .ico img{ width:100%; height:100%; display:block; }
+  .card .ico img,
+  .card .ico svg{ width:100%; height:100%; display:block; }
   .card .body{ min-width:0; flex:1; }
   .card .title{ font-size:18px; font-weight:700; letter-spacing:.05em; }
   .card .desc{ font-size:12.5px; line-height:1.72; color:var(--soft); margin-top:6px; }
@@ -121,11 +122,33 @@
       <div class="ico"><img src="./icons/favicon.svg" alt=""></div>
       <div class="body">
         <div class="title" data-i18n="t1">珠心算 · 听算</div>
-        <div class="desc" data-i18n="d1">听数字，在算盘上累加。可选 4–8 列、3–15 个加数，支持遮盘盲算、自己拨珠作答，还有「打百子」演示和练习日历。</div>
+        <div class="desc" data-i18n="d1">听数字，在算盘上累加。可选 4–10 列、3–15 个加数，支持遮盘盲算、自己拨珠作答，还有「打百子」演示和练习日历。</div>
         <div class="tags">
-          <span data-i18n="g1">4–8 列</span>
+          <span data-i18n="g1">4–10 列</span>
           <span data-i18n="g2">3–15 个数</span>
           <span data-i18n="g3">打百子演示</span>
+        </div>
+      </div>
+      <div class="go">→</div>
+    </a>
+
+    <a class="card" href="./beadtrain/">
+      <div class="ico">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <rect width="48" height="48" fill="#E9F3F0"/>
+          <rect x="21" y="5" width="6" height="38" rx="3" fill="#7A5C38" opacity=".55"/>
+          <ellipse cx="24" cy="13" rx="14" ry="5.6" fill="#262628"/>
+          <ellipse cx="24" cy="25" rx="14" ry="5.6" fill="#262628"/>
+          <ellipse cx="24" cy="35" rx="14" ry="5.6" fill="#262628"/>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="title" data-i18n="t2">认珠 · 拨珠</div>
+        <div class="desc" data-i18n="d2">看盘面写数字，或者看数字拨盘面。2–8 列，两种方向，练习或 20 题计时赛，最好成绩存在本机。</div>
+        <div class="tags">
+          <span data-i18n="g4">2–8 列</span>
+          <span data-i18n="g5">读 · 写双向</span>
+          <span data-i18n="g6">20 题计时</span>
         </div>
       </div>
       <div class="go">→</div>
@@ -148,10 +171,15 @@
     en: {
       sub: 'Abacus practice & tools',
       t1: 'Mental Abacus · Listening',
-      d1: 'Hear numbers, add them on the abacus. Choose 4–8 columns and 3–15 addends; practise blind, enter beads yourself, or watch the 1-to-100 demo. Includes a practice calendar.',
-      g1: '4–8 columns',
+      d1: 'Hear numbers, add them on the abacus. Choose 4–10 columns and 3–15 addends; practise blind, enter beads yourself, or watch the 1-to-100 demo. Includes a practice calendar.',
+      g1: '4–10 columns',
       g2: '3–15 addends',
       g3: '1–100 demo',
+      t2: 'Bead Reading & Dialing',
+      d2: 'Read a bead pattern and write the number, or take a number and set the beads. 2–8 columns, both directions, practice or a 20-question time trial. Best times stay on this device.',
+      g4: '2–8 columns',
+      g5: 'read & dial',
+      g6: '20-question trial',
       empty: 'More tools on the way',
       f1: 'Pure front end, nothing to install. Practice records and timer stay on this device.',
       f2: 'Open in a phone browser and choose “Add to Home Screen” to use it as an app.'

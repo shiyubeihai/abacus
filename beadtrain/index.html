@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6F1E7">
+<title>认珠 · 拨珠</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="算盘">
+<meta name="description" content="认珠与拨珠练习 · Bead reading and dialing drills">
+<style>
+  :root{
+    --paper:#F6F1E7;
+    --panel:#FFFDF8;
+    --line:#E3DACA;
+    --ink:#2C2A26;
+    --muted:#8C8577;
+    --accent:#3E7F73;
+    --accent-soft:#E9F3F0;
+    --rod:#8A6A45;
+    --bead:#C89A66;           /* 珠：原木色 */
+    --bead-hi:#E3BC8C;
+    --bead-lo:#A2764A;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:radial-gradient(900px 500px at 50% -12%, #FFFDF7 0%, var(--paper) 62%);
+    color:var(--ink);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh;
+    padding:max(14px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap{ max-width:520px; margin:0 auto; }
+
+  header{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  h1{
+    font-family:"Songti SC","SimSun","STSong",serif;
+    font-size:24px; margin:0; letter-spacing:.1em; color:var(--accent); flex:1; line-height:1.2;
+  }
+  .back{
+    width:32px; height:32px; flex:none; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    border-radius:9px; text-decoration:none; font-size:18px; line-height:1;
+  }
+  .back:hover{ background:var(--accent-soft); color:var(--accent); }
+  .top-btn{
+    height:32px; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:9px; padding:0 11px; font-size:12.5px; font-family:inherit;
+    cursor:pointer; font-weight:600;
+  }
+  .top-btn:hover{ background:#F2EBDD; }
+
+  .status{ font-size:12.5px; color:var(--muted); min-height:18px; margin:2px 0 8px; letter-spacing:.02em; }
+  .status b{ color:var(--accent); }
+
+  /* 题目 */
+  .prompt{
+    min-height:54px; display:flex; align-items:center; justify-content:center;
+    font-family:"SF Mono",Menlo,Consolas,monospace;
+    font-size:38px; font-weight:700; letter-spacing:.04em;
+    color:var(--accent); font-variant-numeric:tabular-nums; margin-bottom:4px;
+  }
+  .prompt.small{ font-size:13px; font-family:inherit; font-weight:400; color:var(--muted); letter-spacing:.1em; }
+
+  /* 算盘 */
+  .stage{ display:flex; justify-content:center; margin-bottom:12px; width:100%; }
+  .board{ position:relative; display:inline-flex; }
+  .abacus{
+    position:relative; padding:14px 16px;
+    background:linear-gradient(180deg,#3B322B 0%, #2B241F 45%, #211B17 100%);
+    border-radius:12px;
+    box-shadow:0 6px 16px rgba(50,38,25,.28), inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  .abacus::after{
+    content:""; position:absolute; inset:6px; border-radius:8px;
+    border:1px solid rgba(214,180,140,.14); pointer-events:none;
+  }
+  .cols{ position:relative; display:flex; padding:0 5px; }
+  .col{ position:relative; }
+  .rod{
+    position:absolute; left:50%; top:0; bottom:0; width:4px; margin-left:-2px;
+    background:linear-gradient(90deg, #6B4F30, var(--rod) 45%, #B08A5C);
+    border-radius:2px;
+  }
+  .beam{
+    position:absolute; left:0; right:0;
+    background:linear-gradient(180deg,#7A6047,#54402E);
+    box-shadow:0 2px 4px rgba(0,0,0,.35);
+    z-index:2;
+  }
+  .bead{
+    position:absolute; left:50%;
+    background:radial-gradient(circle at 34% 30%, var(--bead-hi) 0%, var(--bead) 52%, var(--bead-lo) 100%);
+    border-radius:48% / 21%;
+    box-shadow:0 1px 2px rgba(20,12,6,.40), inset 0 -1px 2px rgba(120,80,40,.30);
+    transition:top .16s cubic-bezier(.3,.9,.4,1);
+  }
+  .bead::after{
+    content:""; position:absolute; left:24%; top:14%; width:26%; height:20%;
+    border-radius:50%; background:rgba(255,248,232,.40); filter:blur(1.5px);
+  }
+  .abacus.dial .bead{ cursor:pointer; }
+  .abacus.dial .bead:hover{ filter:brightness(2.1); }
+  .abacus.dial .bead:active{ transform:scale(.94); }
+
+  .cover{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    border-radius:12px; z-index:5;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 5px, rgba(0,0,0,.035) 5px 10px),
+      linear-gradient(180deg,#C4AE92 0%, #B39D80 55%, #A98F72 100%);
+    color:#F4EADC; font-size:13px; letter-spacing:.3em; text-shadow:0 1px 2px rgba(70,50,30,.55);
+    box-shadow:inset 0 0 40px rgba(70,50,30,.28);
+    transition:opacity .12s;
+  }
+  .cover.on{ display:flex; }
+
+  .clear-btn{
+    position:absolute; top:4px; right:8px; z-index:6;
+    height:23px; padding:0 9px;
+    display:inline-flex; align-items:center;
+    border:1px solid rgba(122,92,56,.42);
+    background:rgba(255,252,244,.93);
+    color:#6B4F2E; border-radius:7px;
+    font-size:11px; font-weight:700; font-family:inherit; letter-spacing:.05em;
+    cursor:pointer; box-shadow:0 1px 3px rgba(80,55,25,.26);
+    transition:background .12s, transform .12s;
+  }
+  .clear-btn:hover{ background:#fff; }
+  .clear-btn:active{ transform:scale(.94); }
+  .stage.hideClear .clear-btn{ opacity:0; pointer-events:none; }
+
+  /* 作答 */
+  .answer{ display:none; gap:8px; margin-top:2px; }
+  .answer.on{ display:flex; }
+  .answer input{
+    flex:1; min-width:0; border:1px solid var(--line); background:var(--panel);
+    border-radius:11px; padding:12px 14px; font-size:22px; font-family:inherit;
+    color:var(--ink); letter-spacing:.08em; text-align:center; outline:none;
+    font-variant-numeric:tabular-nums;
+  }
+  .answer input:focus{ border-color:var(--accent); }
+  .answer input:disabled{ opacity:.5; }
+  .answer #btnSubmit{ flex:none; padding:12px 20px; }
+  .answer.solo #btnSubmit{ flex:1; }
+
+  .primary{
+    flex:1; border:1px solid var(--accent); background:var(--accent); color:#fff;
+    border-radius:11px; padding:12px; font-size:15px; font-weight:700;
+    font-family:inherit; cursor:pointer; letter-spacing:.1em;
+  }
+  .primary:hover{ filter:brightness(1.06); }
+  .primary:disabled{ opacity:.45; cursor:not-allowed; filter:none; }
+  .main-row{ margin-top:8px; display:flex; }
+  .main-row .primary{ width:100%; }
+
+  .result{
+    display:none; margin-top:10px; padding:12px 14px; border-radius:12px; text-align:center;
+  }
+  .result.on{ display:block; }
+  .result.ok{ background:#F1F8F3; border:1px solid #B7D8C2; }
+  .result.no{ background:#FDF1EF; border:1px solid #EBC4C0; }
+  .result .big{ font-size:18px; font-weight:700; letter-spacing:.04em; }
+  .result.ok .big{ color:#2E8B57; }
+  .result.no .big{ color:#C0392B; }
+  .result .sub{ font-size:12.5px; color:var(--muted); margin-top:5px; }
+  .result .sub b{ color:var(--ink); font-size:14px; font-variant-numeric:tabular-nums; }
+
+  /* 设置 */
+  .row{ display:flex; align-items:center; gap:10px; margin:9px 0; }
+  .k{ width:34px; font-size:12.5px; color:var(--muted); flex:none; }
+  .seg{ display:flex; gap:6px; flex-wrap:wrap; }
+  .seg button{
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    border-radius:999px; padding:5px 13px; font-size:12.5px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:background .15s,color .15s,border-color .15s;
+  }
+  .seg button.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .best{ font-size:11.5px; color:var(--muted); margin-top:12px; letter-spacing:.02em; }
+  .best b{ color:var(--accent); font-variant-numeric:tabular-nums; }
+
+  .foot-note{ font-size:11px; color:var(--muted); line-height:1.7; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <a class="back" href="../" aria-label="返回">‹</a>
+    <h1>认珠 · 拨珠</h1>
+    <button class="top-btn" id="btnTimer" type="button" style="display:none">0.0s</button>
+  </header>
+
+  <div class="status" id="status">选好方向与列数，按开始</div>
+  <div class="prompt small" id="prompt">准备好了就按开始</div>
+
+  <div class="stage" id="stage">
+    <div class="board">
+      <div class="abacus" id="abacus"></div>
+      <div class="cover" id="cover">已盖住</div>
+      <button class="clear-btn" id="btnClear" type="button" title="清盘">清盘</button>
+    </div>
+  </div>
+
+  <div class="answer" id="answerBox">
+    <input id="input" type="text" inputmode="numeric" autocomplete="off" placeholder="你看到的数">
+    <button class="primary" id="btnSubmit">确认</button>
+  </div>
+
+  <div class="main-row">
+    <button class="primary" id="btnMain">开始</button>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div id="settings">
+    <div class="row"><span class="k">方向</span><div class="seg" id="segDir"></div></div>
+    <div class="row"><span class="k">列数</span><div class="seg" id="segCols"></div></div>
+    <div class="row" id="rowFlash"><span class="k">闪视</span><div class="seg" id="segFlash"></div></div>
+    <div class="row"><span class="k">玩法</span><div class="seg" id="segMode"></div></div>
+  </div>
+
+  <div class="best" id="best"></div>
+
+  <div class="foot-note">
+    认珠：盘面亮一下再盖住，把看到的数写出来。<br>
+    拨珠：给你一个数，在盘上拨出来；上珠点一下加五，下珠点到第几颗就是几。
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var FLASH = { slow: 1200, mid: 800, fast: 500 };
+  var FLASH_LABEL = { slow: '慢', mid: '中', fast: '快' };
+  var RUN_N = 20;
+
+  var CFG = { dir: 'read', cols: 4, flash: 'mid', mode: 'practice' };
+  var S = {
+    state: 'idle',      // idle | show | ask | checked | done
+    q: 0, idx: 0, right: 0, t0: 0, tick: null,
+    flashTimer: null, advanceTimer: null
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var elStatus = $('status'), elPrompt = $('prompt'), elStage = $('stage');
+  var elCover = $('cover'), elAnswer = $('answerBox'), elInput = $('input');
+  var elResult = $('result'), elMain = $('btnMain'), elSubmit = $('btnSubmit');
+  var elTimer = $('btnTimer'), elBest = $('best'), elAbacus = $('abacus');
+
+  /* ============ 声音 ============ */
+  var AC = null;
+  function ac(){
+    if (!AC){ try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ AC = null; } }
+    if (AC && AC.state === 'suspended') AC.resume();
+    return AC;
+  }
+  var lastClick = 0;
+  function beadClick(freq){
+    var ctx = ac(); if (!ctx) return;
+    var now = ctx.currentTime;
+    if (now - lastClick < 0.02) return;
+    lastClick = now;
+    var dur = 0.042;
+    var buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i=0;i<data.length;i++){
+      var t = i / data.length;
+      data[i] = (Math.random()*2-1) * Math.pow(1-t, 3.2);
+    }
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+    bp.frequency.value = freq || 2600; bp.Q.value = 1.3;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(1.0, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start(now);
+
+    var o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime((freq||2600)*0.16, now);
+    o.frequency.exponentialRampToValueAtTime((freq||2600)*0.11, now+0.05);
+    var g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0.16, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now+0.07);
+    o.connect(g2); g2.connect(ctx.destination);
+    o.start(now); o.stop(now+0.06);
+  }
+  function tone(freq, up, ms){
+    var ctx = ac(); if (!ctx) return;
+    var now = ctx.currentTime;
+    var o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(freq, now);
+    if (up) o.frequency.exponentialRampToValueAtTime(up, now + ms/1000);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.12, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + ms/1000);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(now); o.stop(now + ms/1000 + 0.02);
+  }
+
+  /* ============ 算盘 ============ */
+  var GEO = { bw: 30, bh: 16, cw: 34, h: 190, beamTop: 62, beamH: 12, gap: 1 };
+  var COLS = 4;
+  var colsEl = [];
+  var dial = [];
+
+  function computeGeo(){
+    var stageW = elStage.clientWidth || Math.min(window.innerWidth - 24, 520);
+    var avail = stageW - 42;
+    var cw = Math.floor(avail / COLS);
+    cw = Math.max(26, Math.min(68, cw));          // 列少时也别把算盘撑太高
+    var bw = cw - 13;
+    var bh = Math.max(12, Math.round(bw * 0.56));
+    var gap = Math.max(3, Math.round(bh * 0.22));
+    var beamTop = Math.round(bh * 2.15);
+    var beamH = Math.round(bh * 0.45);
+    var lowerH = 4 * (bh + gap) + Math.round(bh * 1.15);
+    GEO = { bw: bw, bh: bh, cw: cw, gap: gap, beamTop: beamTop, beamH: beamH,
+            h: beamTop + beamH + lowerH };
+  }
+
+  function upTop(on){
+    return on ? (GEO.beamTop - GEO.bh - Math.round(GEO.bh * 0.15))
+              : Math.round(GEO.bh * 0.22);
+  }
+  function lowTop(j, on){
+    if (on) return GEO.beamTop + GEO.beamH + Math.round(GEO.bh * 0.18) + j * (GEO.bh + GEO.gap);
+    return GEO.h - (4 - j) * (GEO.bh + GEO.gap) + Math.round(GEO.bh * 0.1);
+  }
+
+  function buildAbacus(){
+    computeGeo();
+    elAbacus.innerHTML = '';
+    colsEl = [];
+
+    var inner = document.createElement('div');
+    inner.className = 'cols';
+    inner.style.height = GEO.h + 'px';
+
+    for (var i = 0; i < COLS; i++){
+      var col = document.createElement('div');
+      col.className = 'col';
+      col.style.width = GEO.cw + 'px';
+      col.style.height = GEO.h + 'px';
+
+      var rod = document.createElement('div');
+      rod.className = 'rod';
+      col.appendChild(rod);
+
+      var up = document.createElement('div');
+      up.className = 'bead';
+      up.style.width = GEO.bw + 'px';
+      up.style.height = GEO.bh + 'px';
+      up.style.marginLeft = (-GEO.bw/2) + 'px';
+      up.addEventListener('click', makeDial(i, -1));
+      col.appendChild(up);
+
+      var lows = [];
+      for (var j = 0; j < 4; j++){
+        var b = document.createElement('div');
+        b.className = 'bead';
+        b.style.width = GEO.bw + 'px';
+        b.style.height = GEO.bh + 'px';
+        b.style.marginLeft = (-GEO.bw/2) + 'px';
+        b.addEventListener('click', makeDial(i, j));
+        col.appendChild(b);
+        lows.push(b);
+      }
+      inner.appendChild(col);
+      colsEl.push({ up: up, lows: lows });
+    }
+
+    var beam = document.createElement('div');
+    beam.className = 'beam';
+    beam.style.top = GEO.beamTop + 'px';
+    beam.style.height = GEO.beamH + 'px';
+    inner.appendChild(beam);
+
+    elAbacus.appendChild(inner);
+    setValue(0, true);
+  }
+
+  function paintCol(i, d){
+    var c = colsEl[i];
+    if (!c) return;
+    c.up.style.top = upTop(d >= 5) + 'px';
+    var lowN = d % 5;
+    for (var k = 0; k < 4; k++){
+      c.lows[k].style.top = lowTop(k, k < lowN) + 'px';
+    }
+  }
+
+  function setValue(v, silent){
+    var old = (S.shown === undefined) ? -1 : S.shown;
+    var changed = 0;
+    for (var i = 0; i < COLS; i++){
+      var place = Math.pow(10, COLS - 1 - i);
+      var d = Math.floor(v / place) % 10;
+      var od = (old >= 0) ? Math.floor(old / place) % 10 : 0;
+      paintCol(i, d);
+      dial[i] = d;
+      if (!silent && d !== od) changed++;
+    }
+    S.shown = v;
+    if (!silent && changed){
+      for (var k = 0; k < changed; k++){
+        (function(kk){
+          setTimeout(function(){ beadClick(2300 + kk * 90); }, kk * 38);
+        })(k);
+      }
+    }
+  }
+
+  function dialValue(){
+    var v = 0;
+    for (var i = 0; i < COLS; i++) v = v * 10 + (dial[i] || 0);
+    return v;
+  }
+
+  function makeDial(i, j){
+    return function(ev){
+      ev.stopPropagation();
+      onDial(i, j);
+    };
+  }
+
+  function onDial(i, j){
+    if (CFG.dir !== 'dial' || S.state !== 'ask') return;
+    var d = dial[i] || 0;
+    if (j < 0){
+      d = (d >= 5) ? d - 5 : d + 5;
+    } else {
+      var low = d % 5;
+      var newLow = (j < low) ? j : j + 1;
+      d = (d >= 5 ? 5 : 0) + newLow;
+    }
+    dial[i] = d;
+    paintCol(i, d);
+    beadClick(j < 0 ? 2900 : 2200 + i * 70);
+  }
+
+  /* ============ 出题 ============ */
+  function makeNumber(cols){
+    var lo = Math.pow(10, cols - 1);
+    var hi = Math.pow(10, cols) - 1;
+    return lo + Math.floor(Math.random() * (hi - lo + 1));
+  }
+
+  /* ============ 存档 ============ */
+  var PB_KEY = 'beadtrain.pb.v1';
+  function loadPB(){
+    var out = {};
+    try{
+      var o = JSON.parse(localStorage.getItem(PB_KEY) || '{}');
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
+      for (var k in o){
+        var n = Number(o[k]);
+        if (isFinite(n) && n > 0) out[k] = n;
+      }
+    }catch(e){}
+    return out;
+  }
+  var PB = loadPB();
+  function savePB(){ try{ localStorage.setItem(PB_KEY, JSON.stringify(PB)); }catch(e){} }
+  function pbKey(){ return (CFG.dir === 'read' ? 'r' : 'd') + CFG.cols; }
+  function fmtSec(ms){ return (ms / 1000).toFixed(1) + ' 秒'; }
+
+  function renderBest(){
+    if (CFG.mode !== 'run'){ elBest.textContent = ''; return; }
+    var v = PB[pbKey()];
+    elBest.innerHTML = v
+      ? '这个难度 20 题最好成绩：<b>' + fmtSec(v * 1000) + '</b>'
+      : '这个难度还没有成绩，跑一轮试试';
+  }
+
+  /* ============ 界面状态 ============ */
+  function setStatus(html){ elStatus.innerHTML = html; }
+  function setPrompt(text, big){
+    elPrompt.textContent = text || '';
+    elPrompt.className = 'prompt' + (big ? '' : ' small');
+  }
+  function cover(on){
+    elCover.classList.toggle('on', on);
+    elStage.classList.toggle('hideClear', on);
+  }
+  function showAnswer(on){
+    var dialMode = (CFG.dir === 'dial');
+    elAnswer.classList.toggle('on', on);
+    elAnswer.classList.toggle('solo', dialMode);   // 拨珠时只剩「确认」一颗按钮
+    elInput.style.display = dialMode ? 'none' : '';
+    elInput.disabled = false;
+  }
+  function setResult(html, cls){
+    if (!html){ elResult.className = 'result'; elResult.innerHTML = ''; return; }
+    elResult.className = 'result on ' + cls;
+    elResult.innerHTML = html;
+  }
+  function lockDial(on){
+    elAbacus.classList.toggle('dial', !!on);
+  }
+  function updateMain(){
+    var labels = { idle: '开始', show: '开始', ask: '', checked: '下一题', done: '再来一轮' };
+    var l = labels[S.state];
+    elMain.textContent = l || '开始';
+    var hide = (S.state === 'ask' || S.state === 'show') ||
+               (CFG.mode === 'run' && S.state === 'checked');
+    elMain.disabled = (S.state === 'ask' || S.state === 'show');
+    elMain.style.visibility = hide ? 'hidden' : 'visible';
+  }
+
+  /* ============ 计时 ============ */
+  function startTimer(){
+    elTimer.style.display = '';
+    var t0 = S.t0;
+    clearInterval(S.tick);
+    S.tick = setInterval(function(){
+      elTimer.textContent = ((performance.now() - t0) / 1000).toFixed(1) + 's';
+    }, 100);
+  }
+  function stopTimer(){
+    clearInterval(S.tick); S.tick = null;
+    elTimer.style.display = 'none';
+  }
+
+  /* ============ 流程 ============ */
+  function clearTimers(){
+    clearTimeout(S.flashTimer); S.flashTimer = null;
+    clearTimeout(S.advanceTimer); S.advanceTimer = null;
+  }
+
+  function startSession(){
+    clearTimers();
+    COLS = CFG.cols;
+    buildAbacus();
+    S.idx = 0; S.right = 0;
+    setResult('');
+    elBest.textContent = '';
+    S.state = 'idle';
+    if (CFG.mode === 'run'){ beginRun(); }
+    else { nextQuestion(); }
+  }
+
+  function beginRun(){
+    S.t0 = performance.now();
+    startTimer();
+    nextQuestion();
+  }
+
+  function nextQuestion(){
+    clearTimers();
+    S.q = makeNumber(COLS);
+    S.state = 'ask';
+    setResult('');
+    cover(false);
+    lockDial(CFG.dir === 'dial');
+
+    var prog = (CFG.mode === 'run')
+      ? '第 <b>' + (S.idx + 1) + '</b> / ' + RUN_N + ' 题 · '
+      : '';
+
+    if (CFG.dir === 'read'){
+      setValue(S.q, false);
+      setPrompt('', false);
+      setStatus(prog + '看盘面，记住它');
+      showAnswer(false);
+      elInput.value = '';
+      S.flashTimer = setTimeout(function(){
+        cover(true);
+        setStatus(prog + '你看到的是多少？');
+        showAnswer(true);
+        elInput.focus();
+      }, FLASH[CFG.flash]);
+    } else {
+      setValue(0, true);
+      setPrompt(String(S.q), true);
+      setStatus(prog + '在算盘上拨出这个数');
+      showAnswer(true);
+    }
+    updateMain();
+  }
+
+  function submit(){
+    if (S.state !== 'ask') return;
+    var v;
+    if (CFG.dir === 'read'){
+      var raw = elInput.value.replace(/[^\d]/g, '');
+      if (raw === '') return;
+      v = parseInt(raw, 10);
+    } else {
+      v = dialValue();
+    }
+    var ok = (v === S.q);
+    S.state = 'checked';
+    if (ok) S.right++;
+    clearTimers();
+    showAnswer(false);
+    lockDial(false);
+
+    if (CFG.mode === 'run'){
+      if (!ok){
+        // 速度赛答错：亮出正确盘面，短暂停留后继续
+        cover(false);
+        setValue(S.q, true);
+        setStatus('不对，正确盘面是 <b>' + S.q + '</b>');
+        tone(220, 180, 160);
+        S.advanceTimer = setTimeout(advance, ok ? 260 : 900);
+        updateMain();
+        return;
+      }
+      tone(680, 900, 90);
+      S.advanceTimer = setTimeout(advance, 220);
+      updateMain();
+      return;
+    }
+
+    // 练习模式
+    updateMain();
+    if (ok){
+      tone(680, 900, 90);
+      setResult('<div class="big">对</div><div class="sub">' + S.q + '</div>', 'ok');
+      if (CFG.dir === 'read') cover(false);
+      setStatus('答对了，按「下一题」继续');
+    } else {
+      tone(220, 180, 160);
+      setResult('<div class="big">错</div><div class="sub">你答 <b>' + v + '</b>，正确是 <b>' + S.q + '</b></div>', 'no');
+      cover(false);
+      setValue(S.q, false);
+      setStatus('盘面已经摆成正确答案，看一眼再继续');
+    }
+  }
+
+  function advance(){
+    clearTimers();
+    S.idx++;
+    if (CFG.mode === 'run' && S.idx >= RUN_N){ finishRun(); return; }
+    nextQuestion();
+  }
+
+  function finishRun(){
+    var ms = performance.now() - S.t0;
+    S.state = 'done';
+    stopTimer();
+    cover(false);
+    lockDial(false);
+    showAnswer(false);
+    setPrompt('', false);
+
+    var key = pbKey();
+    var prev = PB[key];
+    var isBest = !prev || ms < prev * 1000;
+    if (isBest){ PB[key] = Math.round(ms) / 1000; savePB(); }
+
+    var sec = (ms / 1000).toFixed(1);
+    var avg = (ms / 1000 / RUN_N).toFixed(2);
+    elResult.className = 'result on ' + (S.right === RUN_N ? 'ok' : 'no');
+    elResult.innerHTML =
+      '<div class="big">' + S.right + ' / ' + RUN_N + ' 题</div>' +
+      '<div class="sub">总用时 <b>' + sec + ' 秒</b>　平均每题 <b>' + avg + ' 秒</b></div>' +
+      '<div class="sub">' + (isBest ? '刷新了最好成绩' : '最好成绩 ' + (PB[key] ? PB[key].toFixed(1) : '-') + ' 秒') + '</div>';
+    setStatus('这一轮结束');
+    updateMain();
+    renderBest();
+  }
+
+  function reset(){
+    clearTimers();
+    stopTimer();
+    S.state = 'idle';
+    S.shown = 0;
+    setResult('');
+    setPrompt('准备好了就按开始', false);
+    setStatus('选好方向与列数，按开始');
+    cover(false);
+    showAnswer(false);
+    lockDial(false);
+    setValue(0, true);
+    updateMain();
+    renderBest();
+  }
+
+  /* ============ 设置 ============ */
+  function buildSeg(host, items, key, fmt){
+    host.innerHTML = '';
+    items.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = fmt ? fmt(v) : v;
+      b.setAttribute('data-v', String(v));
+      b.className = (CFG[key] === v) ? 'on' : '';
+      b.addEventListener('click', function(){
+        if (S.state === 'ask' || S.state === 'show') return;
+        CFG[key] = v;
+        [].forEach.call(host.children, function(c){ c.classList.remove('on'); });
+        b.classList.add('on');
+        if (key === 'cols' || key === 'dir'){
+          reset();
+        } else {
+          renderBest();
+        }
+        syncSettings();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function syncSettings(){
+    $('rowFlash').style.opacity = (CFG.dir === 'read') ? '' : '.35';
+    $('rowFlash').style.pointerEvents = (CFG.dir === 'read') ? '' : 'none';
+    // 清盘只对「拨珠」有意义
+    $('btnClear').style.display = (CFG.dir === 'dial') ? '' : 'none';
+  }
+
+  /* ============ 事件 ============ */
+  elMain.addEventListener('click', function(){
+    if (S.state === 'checked'){ advance(); return; }
+    if (S.state === 'done'){ startSession(); return; }
+    startSession();
+  });
+  elSubmit.addEventListener('click', submit);
+  elInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+  $('btnClear').addEventListener('click', function(){
+    if (CFG.dir !== 'dial' || S.state !== 'ask') return;
+    setValue(0, false);
+  });
+
+  var rzT = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(rzT);
+    rzT = setTimeout(function(){
+      var keep = S.shown || 0;
+      buildAbacus();
+      setValue(keep, true);
+      if (CFG.dir === 'dial' && S.state === 'ask'){
+        for (var i = 0; i < COLS; i++) paintCol(i, dial[i] || 0);
+        S.shown = dialValue();
+      }
+    }, 200);
+  });
+
+  /* ============ 启动 ============ */
+  buildSeg($('segDir'), ['read', 'dial'], 'dir',
+           function(v){ return v === 'read' ? '认珠' : '拨珠'; });
+  buildSeg($('segCols'), [2,3,4,5,6,7,8], 'cols', function(v){ return v + ' 列'; });
+  buildSeg($('segFlash'), ['slow','mid','fast'], 'flash', function(v){ return FLASH_LABEL[v]; });
+  buildSeg($('segMode'), ['practice','run'], 'mode',
+           function(v){ return v === 'run' ? '速度赛' : '练习'; });
+
+  COLS = CFG.cols;
+  buildAbacus();
+  updateMain();
+  syncSettings();
+  reset();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
