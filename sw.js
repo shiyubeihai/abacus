@@ -2,7 +2,7 @@
    改了 index.html / 子应用，务必把 VERSION 加一，否则手机上还是旧的。 */
 'use strict';
 
-var VERSION = '1.0.5';
+var VERSION = '1.0.7';
 var CACHE = 'abacus-' + VERSION;
 
 var ASSETS = [
@@ -16,8 +16,20 @@ var ASSETS = [
   './icons/icon-maskable-512.png',
   './zhuxinsuan/',
   './zhuxinsuan/index.html',
+  './zhuxinsuan/manifest.json',
+  './zhuxinsuan/icons/favicon.svg',
+  './zhuxinsuan/icons/icon-192.png',
+  './zhuxinsuan/icons/icon-512.png',
+  './zhuxinsuan/icons/icon-maskable-512.png',
+  './zhuxinsuan/icons/apple-touch-icon.png',
   './beadtrain/',
-  './beadtrain/index.html'
+  './beadtrain/index.html',
+  './beadtrain/manifest.json',
+  './beadtrain/icons/favicon.svg',
+  './beadtrain/icons/icon-192.png',
+  './beadtrain/icons/icon-512.png',
+  './beadtrain/icons/icon-maskable-512.png',
+  './beadtrain/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', function(e){

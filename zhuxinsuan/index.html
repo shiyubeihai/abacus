@@ -363,11 +363,11 @@
   .timer-actions .sub:hover{ background:#F2EBDD; }
   .timer-note{ margin-top:10px; text-align:center; font-size:10.5px; color:var(--muted); }
 </style>
-<link rel="manifest" href="../manifest.json">
-<link rel="icon" href="../icons/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="算盘">
+<meta name="apple-mobile-web-app-title" content="珠心算">
 <meta name="description" content="珠心算听算练习 · Mental abacus listening practice">
 </head>
 <body>
@@ -624,7 +624,7 @@
     var stageW = (stage ? stage.clientWidth : 0) || Math.min(window.innerWidth - 12, 720);
     var avail = stageW - 42;   // 外框左右内边距 32 + 列容器左右 10
     var cw = Math.max(24, Math.min(72, Math.floor(avail / TOTAL_COLS)));
-    var bw = cw - 13;                                   // 列间留白
+    var bw = Math.max(10, Math.round(cw * 0.78));       // 列间留白按比例走，窄列不至于太细
     var bh = Math.max(12, Math.round(bw * 0.64));       // 珠子接近真算盘的厚薄
     var gap = Math.max(3, Math.round(bh * 0.22));       // 珠子之间透气
     var beamTop = Math.round(bh * 2.15);
@@ -635,7 +635,7 @@
   }
 
   var colsEl = [];   // { up, lows: [], el }
-  var TOTAL_COLS = 8;  // 盘面固定八列，启用的那几列在中间
+  var TOTAL_COLS = 10;  // 盘面固定十列，启用的那几列在中间
 
   function buildAbacus(){
     computeGeo();
@@ -1163,7 +1163,7 @@
   $('tabMul').addEventListener('click', function(){ renderMul(); this.classList.add('on'); $('tabAdd').classList.remove('on'); });
 
   /* ============ 启动 ============ */
-  buildSeg($('segCols'), [4,5,6,7,8], 'cols', function(v){ return v + ' 列'; });
+  buildSeg($('segCols'), [4,5,6,7,8,9,10], 'cols', function(v){ return v + ' 列'; });
   buildSeg($('segCount'), [3,5,7,10,15], 'count');
   buildSeg($('segSpeed'), ['slow','mid','fast'], 'speed', function(v){ return SPEED_LABEL[v]; });
   buildSeg($('segExpr'), [true, false], 'showExpr', function(v){ return v ? '显示' : '隐藏'; });
